@@ -1,0 +1,2 @@
+
+read the specs/ and understand the project state. review the screenshot, visit https://claude.ai/new to continue cloning Claude user interface. Focus on the + icon dropdown in prompt box feature to add files or photos, using Research mode, using Web search mode. Research online https://platform.claude.com/docs/en/home claude api docs to understand the latest capabilities. make sure you are following all best practices mentioned in claude docs. 

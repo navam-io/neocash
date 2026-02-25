@@ -1,0 +1,2 @@
+
+Review the prompt box UI of claude AI and note any subtle differences that remain in NeoCash prompt box, like model selector on right, no send prompt button, suggested prompts buttons animate hide when user enters prompt manually and reappear on losing focus on prompt box, clicking a suggested prompt title adds pre-fills the detailed prompt in prompt box instead of initiating the conversation. Create a perfect clone of the prompt box experience, keeping NeoCash nuances intact.
