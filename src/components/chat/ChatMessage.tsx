@@ -1,7 +1,7 @@
 "use client";
 
 import type { UIMessage } from "ai";
-import { User } from "lucide-react";
+
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { LoadingDots } from "@/components/ui/LoadingDots";
 
@@ -25,19 +25,13 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
   const text = getMessageText(message);
 
   return (
-    <div className={`flex gap-3 ${isUser ? "justify-end" : ""}`}>
-      {!isUser && (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-light mt-0.5">
-          <span className="text-accent text-xs font-bold">N</span>
-        </div>
-      )}
-
+    <div className={`w-full ${isUser ? "flex justify-end" : ""}`}>
       <div
-        className={`max-w-[85%] ${
+        className={
           isUser
             ? "rounded-2xl bg-surface-hover px-4 py-2.5"
-            : "flex-1 min-w-0"
-        }`}
+            : "min-w-0"
+        }
         style={
           isUser
             ? { boxShadow: "var(--shadow-message)" }
@@ -52,12 +46,6 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
           <MarkdownRenderer content={text} />
         )}
       </div>
-
-      {isUser && (
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-text-primary mt-0.5">
-          <User size={14} className="text-text-inverse" />
-        </div>
-      )}
     </div>
   );
 }
