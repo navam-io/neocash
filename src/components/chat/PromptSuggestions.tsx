@@ -1,8 +1,10 @@
 "use client";
 
+import type { Prompt } from "@/types";
+
 interface PromptSuggestionsProps {
-  prompts: string[];
-  onSelect: (prompt: string) => void;
+  prompts: Prompt[];
+  onSelect: (prompt: Prompt) => void;
 }
 
 export function PromptSuggestions({
@@ -16,11 +18,11 @@ export function PromptSuggestions({
     >
       {prompts.map((prompt) => (
         <button
-          key={prompt}
+          key={prompt.title}
           onClick={() => onSelect(prompt)}
           className="flex w-full rounded-lg px-3 py-2.5 text-left text-sm text-text-secondary transition-colors hover:bg-surface-hover"
         >
-          {prompt}
+          {prompt.title}
         </button>
       ))}
     </div>

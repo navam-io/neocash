@@ -12,6 +12,8 @@ interface ChatInputProps {
   isLoading?: boolean;
   autoFocus?: boolean;
   initialValue?: string;
+  value?: string;
+  onChange?: (value: string) => void;
 }
 
 export function ChatInput({
@@ -20,9 +22,15 @@ export function ChatInput({
   isLoading = false,
   autoFocus = true,
   initialValue = "",
+  value: controlledValue,
+  onChange: controlledOnChange,
 }: ChatInputProps) {
-  const [value, setValue] = useState(initialValue);
+  const isControlled = controlledValue !== undefined && controlledOnChange !== undefined;
+  const [internalValue, setInternalValue] = useState(initialValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const value = isControlled ? controlledValue : internalValue;
+  const setValue = isControlled ? controlledOnChange : setInternalValue;
 
   useEffect(() => {
     if (autoFocus && textareaRef.current) {
@@ -30,10 +38,19 @@ export function ChatInput({
     }
   }, [autoFocus]);
 
+  // Focus textarea when value is pre-filled from parent
+  useEffect(() => {
+    if (isControlled && controlledValue && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [isControlled, controlledValue]);
+
+  const hasContent = value.trim().length > 0;
+
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (value.trim() && !isLoading) {
+      if (hasContent && !isLoading) {
         onSend(value.trim());
         setValue("");
       }
@@ -42,7 +59,7 @@ export function ChatInput({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (value.trim() && !isLoading) {
+    if (hasContent && !isLoading) {
       onSend(value.trim());
       setValue("");
     }
@@ -68,17 +85,21 @@ export function ChatInput({
           />
         </div>
 
-        {/* Bottom bar: upload + model selector | send button */}
+        {/* Bottom bar: upload | model selector + send button */}
         <div className="flex items-center justify-between px-3 pb-2.5">
           <div className="flex items-center gap-1">
             <UploadButton />
-            <ModelSelector />
           </div>
-          <SendButton
-            isLoading={isLoading}
-            hasContent={value.trim().length > 0}
-            onStop={onStop}
-          />
+          <div className="flex items-center gap-1">
+            <ModelSelector />
+            {(hasContent || isLoading) && (
+              <SendButton
+                isLoading={isLoading}
+                hasContent={hasContent}
+                onStop={onStop}
+              />
+            )}
+          </div>
         </div>
       </div>
     </form>

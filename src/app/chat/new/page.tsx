@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { nanoid } from "nanoid";
 import { useApp } from "@/context/AppContext";
@@ -12,6 +12,9 @@ import { createChat, saveChat } from "@/hooks/useChatHistory";
 export default function NewChatPage() {
   const router = useRouter();
   const { selectedModel, setActiveChatId, refreshChatList } = useApp();
+  const [inputValue, setInputValue] = useState("");
+
+  const categoriesVisible = inputValue.trim().length === 0;
 
   const startChat = useCallback(
     async (message: string) => {
@@ -26,14 +29,27 @@ export default function NewChatPage() {
     [selectedModel, setActiveChatId, refreshChatList, router],
   );
 
+  function handlePrefill(text: string) {
+    setInputValue(text);
+  }
+
   return (
     <div className="flex h-full flex-col items-center justify-center px-4">
       <div className="w-full max-w-2xl flex flex-col items-center gap-6">
         <ChatGreeting />
 
-        <ChatInput onSend={startChat} autoFocus />
+        <ChatInput
+          onSend={startChat}
+          autoFocus
+          value={inputValue}
+          onChange={setInputValue}
+        />
 
-        <PromptCategories onSelectPrompt={startChat} />
+        <PromptCategories
+          onSelectPrompt={startChat}
+          visible={categoriesVisible}
+          onPrefill={handlePrefill}
+        />
       </div>
     </div>
   );

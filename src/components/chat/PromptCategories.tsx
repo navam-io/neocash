@@ -21,15 +21,28 @@ const iconMap = {
 
 interface PromptCategoriesProps {
   onSelectPrompt: (prompt: string) => void;
+  visible?: boolean;
+  onPrefill?: (text: string) => void;
 }
 
-export function PromptCategories({ onSelectPrompt }: PromptCategoriesProps) {
+export function PromptCategories({
+  onSelectPrompt,
+  visible = true,
+  onPrefill,
+}: PromptCategoriesProps) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   const activeData = promptCategories.find((c) => c.id === activeCategory);
 
   return (
-    <div className="flex flex-col items-center gap-3 w-full">
+    <div
+      className="flex flex-col items-center gap-3 w-full transition-all duration-300 ease-in-out"
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(8px)",
+        pointerEvents: visible ? "auto" : "none",
+      }}
+    >
       {/* Category tabs */}
       <div className="flex flex-wrap justify-center gap-2">
         {promptCategories.map((category) => {
@@ -61,7 +74,11 @@ export function PromptCategories({ onSelectPrompt }: PromptCategoriesProps) {
           <PromptSuggestions
             prompts={activeData.prompts}
             onSelect={(prompt) => {
-              onSelectPrompt(prompt);
+              if (onPrefill) {
+                onPrefill(prompt.text);
+              } else {
+                onSelectPrompt(prompt.title);
+              }
               setActiveCategory(null);
             }}
           />

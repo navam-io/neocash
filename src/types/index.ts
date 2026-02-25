@@ -16,9 +16,14 @@ export interface ModelOption {
   provider: string;
 }
 
+export interface Prompt {
+  title: string;
+  text: string;
+}
+
 export interface PromptCategory {
   id: string;
   label: string;
   icon: string;
-  prompts: string[];
+  prompts: Prompt[];
 }
