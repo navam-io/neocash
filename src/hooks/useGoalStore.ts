@@ -65,10 +65,14 @@ export async function listRegularChats(): Promise<ChatRecord[]> {
 export async function updateGoalStatus(
   id: string,
   status: GoalStatus,
+  disableCapture?: boolean,
 ): Promise<void> {
   const chat = await getChat(id);
   if (chat?.goal) {
     chat.goal.status = status;
+    if (disableCapture) {
+      chat.goal.crossPollinate = false;
+    }
     await set(chatKey(id), { ...chat, updatedAt: Date.now() });
   }
 }

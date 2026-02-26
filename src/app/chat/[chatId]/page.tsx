@@ -19,7 +19,6 @@ import {
   listGoals,
   updateGoalStatus,
   toggleCrossPollination,
-  setCrossPollination,
   incrementGoalSignals,
 } from "@/hooks/useGoalStore";
 import { saveSignal, listSignalsForGoal } from "@/hooks/useSignalStore";
@@ -238,17 +237,14 @@ export default function ChatPage({
 
   const handleStatusChange = useCallback(
     async (newStatus: GoalStatus) => {
-      await updateGoalStatus(chatId, newStatus);
-      // Auto-disable signal capture when pausing/completing
-      if (newStatus !== "active") {
-        await setCrossPollination(chatId, false);
-      }
+      const disableCapture = newStatus !== "active";
+      await updateGoalStatus(chatId, newStatus, disableCapture || undefined);
       setGoalMeta((prev) => {
         if (!prev) return null;
         return {
           ...prev,
           status: newStatus,
-          crossPollinate: newStatus === "active" ? prev.crossPollinate : false,
+          crossPollinate: disableCapture ? false : prev.crossPollinate,
         };
       });
       refreshGoalList();

@@ -54,12 +54,12 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
     refreshChatList();
     // Fire-and-forget: scan existing chats for signals relevant to this new goal
     scanExistingChatsForSignals(id, trimmedTitle, goalDescription, category || undefined).then(() => refreshGoalList());
-    onClose();
     // Use the description as kickoff message if available, otherwise generic
     const kickoff = goalDescription !== trimmedTitle
       ? goalDescription
       : `Help me work on my goal: ${trimmedTitle}. What information do you need to get started, and what are the first steps?`;
     router.push(`/chat/${id}?message=${encodeURIComponent(kickoff)}`);
+    onClose();
   }
 
   return (

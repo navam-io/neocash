@@ -22,6 +22,7 @@ export function GoalSignalPanel({
 }: GoalSignalPanelProps) {
   const router = useRouter();
   const [signalsExpanded, setSignalsExpanded] = useState(false);
+  const captureDisabled = goal.status !== "active";
 
   return (
     <div className="border-b border-border bg-accent/5 px-4 py-3">
@@ -52,33 +53,28 @@ export function GoalSignalPanel({
         </div>
 
         {/* Signal capture toggle */}
-        {(() => {
-          const isDisabled = goal.status !== "active";
-          return (
-            <label className={`flex items-center gap-1.5 ${isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
-              <Radio
-                size={12}
-                className={goal.crossPollinate && !isDisabled ? "text-accent" : "text-text-tertiary"}
-              />
-              <span className="text-xs text-text-secondary">
-                Capture signals
-              </span>
-              <button
-                onClick={isDisabled ? undefined : onTogglePollinate}
-                disabled={isDisabled}
-                className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-                  goal.crossPollinate && !isDisabled ? "bg-accent" : "bg-border"
-                } ${isDisabled ? "cursor-not-allowed" : ""}`}
-              >
-                <span
-                  className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${
-                    goal.crossPollinate && !isDisabled ? "translate-x-3.5" : "translate-x-0.5"
-                  }`}
-                />
-              </button>
-            </label>
-          );
-        })()}
+        <label className={`flex items-center gap-1.5 ${captureDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
+          <Radio
+            size={12}
+            className={goal.crossPollinate && !captureDisabled ? "text-accent" : "text-text-tertiary"}
+          />
+          <span className="text-xs text-text-secondary">
+            Capture signals
+          </span>
+          <button
+            onClick={captureDisabled ? undefined : onTogglePollinate}
+            disabled={captureDisabled}
+            className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+              goal.crossPollinate && !captureDisabled ? "bg-accent" : "bg-border"
+            } ${captureDisabled ? "cursor-not-allowed" : ""}`}
+          >
+            <span
+              className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${
+                goal.crossPollinate && !captureDisabled ? "translate-x-3.5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </label>
 
         {/* Signal count */}
         {signals.length > 0 && (
