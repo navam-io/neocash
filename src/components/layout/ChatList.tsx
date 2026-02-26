@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageSquare } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { listChats } from "@/hooks/useChatHistory";
+import { listRegularChats } from "@/hooks/useGoalStore";
 import type { ChatRecord } from "@/types";
 
 export function ChatList() {
@@ -13,7 +13,7 @@ export function ChatList() {
   const [chats, setChats] = useState<ChatRecord[]>([]);
 
   useEffect(() => {
-    listChats().then(setChats);
+    listRegularChats().then(setChats);
   }, [chatListVersion]);
 
   if (chats.length === 0) {

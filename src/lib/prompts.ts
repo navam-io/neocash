@@ -136,4 +136,31 @@ export const promptCategories: PromptCategory[] = [
       },
     ],
   },
+  {
+    id: "goals",
+    label: "Goals",
+    icon: "target",
+    prompts: [
+      {
+        title: "Start a tax preparation goal for 2026",
+        text: "I want to set a goal to prepare for the 2026 tax season. Help me build a month-by-month checklist of what to gather, deadlines to track, and strategies to maximize my refund or minimize what I owe.",
+      },
+      {
+        title: "Track my portfolio rebalancing progress",
+        text: "I want to set a goal to rebalance my portfolio. Help me assess my current allocation, define a target allocation, and create an actionable plan with specific trades and a timeline.",
+      },
+      {
+        title: "Build an emergency fund plan",
+        text: "I want to set a goal to build my emergency fund. Help me determine the right target amount based on my expenses, create a savings plan with monthly milestones, and suggest the best accounts to hold it in.",
+      },
+      {
+        title: "Plan my retirement savings strategy",
+        text: "I want to set a goal for my retirement savings strategy. Help me evaluate my current retirement accounts, optimize contributions across 401(k)/IRA/Roth, and project my savings growth with different contribution scenarios.",
+      },
+      {
+        title: "Set a debt payoff goal with milestones",
+        text: "I want to set a goal to pay off my debt systematically. Help me list all debts, compare avalanche vs snowball strategies, create a payoff timeline with milestones, and find opportunities to accelerate payments.",
+      },
+    ],
+  },
 ];

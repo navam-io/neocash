@@ -6,6 +6,7 @@ import { Plus, Search } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { ChatList } from "./ChatList";
 import { DocumentList } from "./DocumentList";
+import { GoalList } from "./GoalList";
 import { UserProfile } from "./UserProfile";
 import { SidebarToggle } from "./SidebarToggle";
 import { APP_NAME } from "@/lib/constants";
@@ -88,6 +89,10 @@ export function Sidebar() {
 
             {/* Documents */}
             <DocumentList />
+            <div className="mx-3 border-t border-border" />
+
+            {/* Goals */}
+            <GoalList />
             <div className="mx-3 border-t border-border" />
 
             {/* Chat List */}

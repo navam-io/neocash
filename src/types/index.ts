@@ -1,5 +1,26 @@
 import type { UIMessage } from "ai";
 
+export type GoalStatus = "active" | "paused" | "completed";
+
+export interface GoalMeta {
+  type: "goal";
+  description: string;
+  status: GoalStatus;
+  category?: string;           // matches prompt category ids: "tax", "investing", etc.
+  signalCount: number;
+  crossPollinate: boolean;     // toggleable per goal (default: true)
+}
+
+export interface SignalRecord {
+  id: string;                  // nanoid(10)
+  goalId: string;
+  sourceChatId: string;
+  sourceMessageId: string;
+  summary: string;
+  category: string;            // "tax_insight", "investment_signal", etc.
+  createdAt: number;
+}
+
 export interface ChatRecord {
   id: string;
   title: string;
@@ -7,6 +28,7 @@ export interface ChatRecord {
   model: string;
   createdAt: number;
   updatedAt: number;
+  goal?: GoalMeta;             // present only for goal threads
 }
 
 export interface ModelOption {
