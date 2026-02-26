@@ -25,6 +25,8 @@ interface AppContextType {
   setActiveChatId: (id: string | null) => void;
   chatListVersion: number;
   refreshChatList: () => void;
+  documentListVersion: number;
+  refreshDocumentList: () => void;
   pendingFiles: React.RefObject<FileUIPart[]>;
 }
 
@@ -37,6 +39,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [webSearch, setWebSearch] = useState(false);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatListVersion, setChatListVersion] = useState(0);
+  const [documentListVersion, setDocumentListVersion] = useState(0);
   const pendingFiles = useRef<FileUIPart[]>([]);
 
   const toggleSidebar = useCallback(
@@ -45,6 +48,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const refreshChatList = useCallback(
     () => setChatListVersion((v) => v + 1),
+    [],
+  );
+  const refreshDocumentList = useCallback(
+    () => setDocumentListVersion((v) => v + 1),
     [],
   );
 
@@ -64,6 +71,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setActiveChatId,
         chatListVersion,
         refreshChatList,
+        documentListVersion,
+        refreshDocumentList,
         pendingFiles,
       }}
     >

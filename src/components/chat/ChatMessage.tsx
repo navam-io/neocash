@@ -1,9 +1,11 @@
 "use client";
 
 import type { UIMessage } from "ai";
+import { FileText, FileSpreadsheet, FileType, File } from "lucide-react";
 
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { LoadingDots } from "@/components/ui/LoadingDots";
+import { getFileCategory } from "@/lib/file-utils";
 
 interface ChatMessageProps {
   message: UIMessage;
@@ -27,10 +29,26 @@ function getMessageImages(message: UIMessage): { url: string; filename?: string 
     .map((p) => ({ url: (p as { url: string; filename?: string }).url, filename: (p as { filename?: string }).filename }));
 }
 
+function getMessageDocuments(message: UIMessage): { mediaType: string; filename?: string }[] {
+  if (!message.parts) return [];
+  return message.parts
+    .filter((p) => p.type === "file" && !p.mediaType.startsWith("image/"))
+    .map((p) => ({ mediaType: (p as { mediaType: string }).mediaType, filename: (p as { filename?: string }).filename }));
+}
+
+function MessageDocIcon({ mediaType }: { mediaType: string }) {
+  const cat = getFileCategory(mediaType);
+  if (cat === "pdf") return <FileText size={14} className="text-red-500 shrink-0" />;
+  if (cat === "excel" || cat === "csv") return <FileSpreadsheet size={14} className="text-green-600 shrink-0" />;
+  if (cat === "word") return <FileType size={14} className="text-blue-500 shrink-0" />;
+  return <File size={14} className="text-text-tertiary shrink-0" />;
+}
+
 export function ChatMessage({ message, isLoading }: ChatMessageProps) {
   const isUser = message.role === "user";
   const text = getMessageText(message);
   const images = isUser ? getMessageImages(message) : [];
+  const documents = isUser ? getMessageDocuments(message) : [];
 
   return (
     <div className={`w-full ${isUser ? "flex justify-end" : ""}`}>
@@ -48,6 +66,21 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
       >
         {isUser ? (
           <>
+            {documents.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {documents.map((doc, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5"
+                  >
+                    <MessageDocIcon mediaType={doc.mediaType} />
+                    <span className="text-xs text-text-secondary">
+                      {doc.filename || "Document"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
             {images.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2">
                 {images.map((img, i) => (

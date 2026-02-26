@@ -7,7 +7,14 @@ import { useSearchParams } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { nanoid } from "nanoid";
 import { getChat, saveChat } from "@/hooks/useChatHistory";
+import {
+  saveDocument,
+  listDocuments,
+  updateDocumentMetadata,
+} from "@/hooks/useDocumentStore";
+import { extractDocumentMetadata } from "@/lib/file-utils";
 
 export default function ChatPage({
   params,
@@ -16,7 +23,7 @@ export default function ChatPage({
 }) {
   const { chatId } = use(params);
   const searchParams = useSearchParams();
-  const { selectedModel, researchMode, webSearch, setActiveChatId, refreshChatList, pendingFiles } = useApp();
+  const { selectedModel, researchMode, webSearch, setActiveChatId, refreshChatList, refreshDocumentList, pendingFiles } = useApp();
   const [initialLoaded, setInitialLoaded] = useState(false);
 
   const { messages, sendMessage, stop, setMessages, status } = useChat({
@@ -25,8 +32,31 @@ export default function ChatPage({
       api: "/api/chat",
       body: { model: selectedModel, researchMode, webSearch },
     }),
-    onFinish: async () => {
+    onFinish: async ({ message }) => {
       refreshChatList();
+      // Extract metadata for documents in this chat that have none
+      try {
+        const docs = await listDocuments();
+        const chatDocs = docs.filter(
+          (d) => d.chatId === chatId && !d.metadata,
+        );
+        if (chatDocs.length > 0) {
+          const text =
+            message.parts
+              ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+              .map((p) => p.text)
+              .join("") || "";
+          if (text) {
+            for (const doc of chatDocs) {
+              const meta = extractDocumentMetadata(text, doc.filename);
+              await updateDocumentMetadata(doc.id, meta);
+            }
+            refreshDocumentList();
+          }
+        }
+      } catch {
+        // Non-critical — metadata extraction is best-effort
+      }
     },
   });
 
@@ -94,7 +124,25 @@ export default function ChatPage({
       <div className="shrink-0 px-4 pb-4">
         <div className="mx-auto max-w-2xl">
           <ChatInput
-            onSend={(text, files) => sendMessage({ text, files })}
+            onSend={async (text, files) => {
+              if (files) {
+                for (const file of files) {
+                  if (!file.mediaType.startsWith("image/")) {
+                    await saveDocument({
+                      id: nanoid(10),
+                      filename: file.filename || "Document",
+                      mediaType: file.mediaType,
+                      chatId,
+                      metadata: "",
+                      fileSize: file.url.length,
+                      createdAt: Date.now(),
+                    });
+                  }
+                }
+                refreshDocumentList();
+              }
+              sendMessage({ text, files });
+            }}
             onStop={stop}
             isLoading={isLoading}
           />

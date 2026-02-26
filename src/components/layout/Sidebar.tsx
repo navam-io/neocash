@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Search } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { ChatList } from "./ChatList";
+import { DocumentList } from "./DocumentList";
 import { UserProfile } from "./UserProfile";
 import { SidebarToggle } from "./SidebarToggle";
 import { APP_NAME } from "@/lib/constants";
@@ -83,6 +84,10 @@ export function Sidebar() {
             </div>
 
             {/* Divider */}
+            <div className="mx-3 border-t border-border" />
+
+            {/* Documents */}
+            <DocumentList />
             <div className="mx-3 border-t border-border" />
 
             {/* Chat List */}

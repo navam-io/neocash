@@ -27,3 +27,13 @@ export interface PromptCategory {
   icon: string;
   prompts: Prompt[];
 }
+
+export interface DocumentRecord {
+  id: string;           // nanoid(10)
+  filename: string;     // original filename (dedup key)
+  mediaType: string;    // MIME type
+  chatId: string;       // associated conversation
+  metadata: string;     // AI-generated subtext (initially empty)
+  fileSize: number;     // bytes
+  createdAt: number;    // timestamp
+}

@@ -9,10 +9,11 @@ import { ChatGreeting } from "@/components/chat/ChatGreeting";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { PromptCategories } from "@/components/chat/PromptCategories";
 import { createChat, saveChat } from "@/hooks/useChatHistory";
+import { saveDocument } from "@/hooks/useDocumentStore";
 
 export default function NewChatPage() {
   const router = useRouter();
-  const { selectedModel, setActiveChatId, refreshChatList, pendingFiles } = useApp();
+  const { selectedModel, setActiveChatId, refreshChatList, refreshDocumentList, pendingFiles } = useApp();
   const [inputValue, setInputValue] = useState("");
 
   const categoriesVisible = inputValue.trim().length === 0;
@@ -27,10 +28,24 @@ export default function NewChatPage() {
       refreshChatList();
       if (files && files.length > 0) {
         pendingFiles.current = files;
+        for (const file of files) {
+          if (!file.mediaType.startsWith("image/")) {
+            await saveDocument({
+              id: nanoid(10),
+              filename: file.filename || "Document",
+              mediaType: file.mediaType,
+              chatId: id,
+              metadata: "",
+              fileSize: file.url.length,
+              createdAt: Date.now(),
+            });
+          }
+        }
+        refreshDocumentList();
       }
       router.push(`/chat/${id}?message=${encodeURIComponent(message)}`);
     },
-    [selectedModel, setActiveChatId, refreshChatList, pendingFiles, router],
+    [selectedModel, setActiveChatId, refreshChatList, refreshDocumentList, pendingFiles, router],
   );
 
   function handlePrefill(text: string) {

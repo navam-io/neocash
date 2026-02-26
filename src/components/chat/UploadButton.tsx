@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Plus, Image, Lightbulb, Globe, Check } from "lucide-react";
+import { Plus, Image, FileText, Lightbulb, Globe, Check } from "lucide-react";
+import { DOCUMENT_ACCEPT } from "@/lib/file-utils";
 import { useApp } from "@/context/AppContext";
 
 interface ContextMenuProps {
@@ -13,6 +14,7 @@ export function ContextMenu({ onFileSelect }: ContextMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -53,6 +55,19 @@ export function ContextMenu({ onFileSelect }: ContextMenuProps) {
             <span className="text-sm text-text-primary">Add images</span>
           </button>
 
+          {/* Add documents */}
+          <button
+            type="button"
+            onClick={() => {
+              docInputRef.current?.click();
+              setOpen(false);
+            }}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-surface-hover"
+          >
+            <FileText size={16} className="text-text-tertiary shrink-0" />
+            <span className="text-sm text-text-primary">Add documents</span>
+          </button>
+
           {/* Research mode */}
           <button
             type="button"
@@ -87,11 +102,26 @@ export function ContextMenu({ onFileSelect }: ContextMenuProps) {
         </div>
       )}
 
-      {/* Hidden file input */}
+      {/* Hidden file input for images */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            onFileSelect(e.target.files);
+          }
+          e.target.value = "";
+        }}
+      />
+
+      {/* Hidden file input for documents */}
+      <input
+        ref={docInputRef}
+        type="file"
+        accept={DOCUMENT_ACCEPT}
         multiple
         className="hidden"
         onChange={(e) => {
