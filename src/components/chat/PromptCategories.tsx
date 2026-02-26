@@ -8,12 +8,14 @@ import {
   Wallet,
   Sparkles,
   Target,
+  Plus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { promptCategories } from "@/lib/prompts";
 import { PromptSuggestions } from "./PromptSuggestions";
 import { useApp } from "@/context/AppContext";
 import { listGoals } from "@/hooks/useGoalStore";
+import { GoalCreateForm } from "@/components/goals/GoalCreateForm";
 import type { ChatRecord } from "@/types";
 
 const iconMap = {
@@ -38,6 +40,7 @@ export function PromptCategories({
 }: PromptCategoriesProps) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [existingGoals, setExistingGoals] = useState<ChatRecord[]>([]);
+  const [showGoalForm, setShowGoalForm] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { goalListVersion } = useApp();
   const router = useRouter();
@@ -81,25 +84,46 @@ export function PromptCategories({
           const isGoal = category.id === "goals";
 
           return (
-            <button
-              key={category.id}
-              onClick={() =>
-                setActiveCategory(isActive ? null : category.id)
-              }
-              className={`category-tab flex items-center gap-1.5 rounded-lg px-3 h-8 text-sm ${
-                isActive
-                  ? "bg-surface text-text-primary shadow-[0_0_0_0.5px_rgba(31,30,29,0.25)]"
-                  : isGoal
-                    ? "text-accent hover:bg-surface-hover shadow-[0_0_0_0.5px_rgba(196,112,75,0.3)]"
-                    : "text-text-secondary hover:bg-surface-hover shadow-[0_0_0_0.5px_rgba(31,30,29,0.12)]"
-              }`}
-            >
-              {Icon && <Icon size={14} />}
-              <span>{category.label}</span>
-            </button>
+            <div key={category.id} className="flex items-center">
+              <button
+                onClick={() =>
+                  setActiveCategory(isActive ? null : category.id)
+                }
+                className={`category-tab flex items-center gap-1.5 rounded-lg px-3 h-8 text-sm ${
+                  isActive
+                    ? "bg-surface text-text-primary shadow-[0_0_0_0.5px_rgba(31,30,29,0.25)]"
+                    : isGoal
+                      ? "text-accent hover:bg-surface-hover shadow-[0_0_0_0.5px_rgba(196,112,75,0.3)]"
+                      : "text-text-secondary hover:bg-surface-hover shadow-[0_0_0_0.5px_rgba(31,30,29,0.12)]"
+                }`}
+              >
+                {Icon && <Icon size={14} />}
+                <span>{category.label}</span>
+              </button>
+              {isGoal && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowGoalForm(!showGoalForm);
+                    setActiveCategory(null);
+                  }}
+                  className="ml-0.5 flex h-8 w-6 items-center justify-center rounded-lg text-accent hover:bg-surface-hover transition-colors"
+                  aria-label="New goal"
+                >
+                  <Plus size={14} />
+                </button>
+              )}
+            </div>
           );
         })}
       </div>
+
+      {/* Goal create form */}
+      {showGoalForm && (
+        <div className="w-full max-w-lg">
+          <GoalCreateForm onClose={() => setShowGoalForm(false)} />
+        </div>
+      )}
 
       {/* Suggestions dropdown */}
       {activeData && (

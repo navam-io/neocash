@@ -6,12 +6,10 @@ import {
   ChevronDown,
   ChevronRight,
   Target,
-  Plus,
   Check,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { listGoals } from "@/hooks/useGoalStore";
-import { GoalCreateForm } from "@/components/goals/GoalCreateForm";
 import type { ChatRecord } from "@/types";
 
 function StatusDot({ status }: { status: string }) {
@@ -32,14 +30,13 @@ export function GoalList() {
   const router = useRouter();
   const [goals, setGoals] = useState<ChatRecord[]>([]);
   const [collapsed, setCollapsed] = useState(false);
-  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     listGoals().then(setGoals);
   }, [goalListVersion]);
 
-  // Don't render section at all if no goals and form is hidden
-  if (goals.length === 0 && !showForm) return null;
+  // Don't render section at all if no goals
+  if (goals.length === 0) return null;
 
   return (
     <div className="py-2">
@@ -61,17 +58,7 @@ export function GoalList() {
             </span>
           )}
         </button>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="ml-1 flex h-5 w-5 items-center justify-center rounded text-text-tertiary hover:text-text-secondary hover:bg-sidebar-hover transition-colors"
-          aria-label="New goal"
-        >
-          <Plus size={12} />
-        </button>
       </div>
-
-      {/* Create form */}
-      {showForm && <GoalCreateForm onClose={() => setShowForm(false)} />}
 
       {/* Goal items */}
       {!collapsed && goals.length > 0 && (
