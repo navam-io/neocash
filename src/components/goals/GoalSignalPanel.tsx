@@ -58,7 +58,7 @@ export function GoalSignalPanel({
             className={goal.crossPollinate ? "text-accent" : "text-text-tertiary"}
           />
           <span className="text-xs text-text-secondary">
-            Cross-pollinate
+            Capture signals
           </span>
           <button
             onClick={onTogglePollinate}
