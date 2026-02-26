@@ -33,17 +33,24 @@ Match Claude AI prompt box behavior for polished input experience.
 
 ---
 
-## Open
-
 ### Context Dropdown — [`intents/context-dropdown.md`](intents/context-dropdown.md)
 
 Add a + icon dropdown in the prompt box for context and mode controls.
 
-- Add files or photos capability
-- Research mode toggle
-- Web search mode toggle
-- Anthropic API best practices integration
-- UploadButton component exists as stub
+- Context dropdown (`+` button) with 3 items: Add photos, Research mode, Search the web
+- Image attachments with thumbnail preview, hover-to-remove, and API delivery via pendingFiles ref
+- Research mode toggle with extended thinking (10k token budget) and pill indicator
+- Web search toggle with Anthropic web search tool and pill indicator
+- Dual-mode combinations with multiple pill indicators
+- Outside-click dropdown dismiss, check icons for active toggles
+
+**Commits:** `490b416` Add context dropdown with image attachments, research mode, and web search · `ae08f6f` Fix image attachments not sent to API during new chat redirect
+
+---
+
+## Open
+
+_No open intents._
 
 ---
 
@@ -51,6 +58,8 @@ Add a + icon dropdown in the prompt box for context and mode controls.
 
 | SHA | Message |
 |-----|---------|
+| `ae08f6f` | Fix image attachments not sent to API during new chat redirect |
+| `490b416` | Add context dropdown with image attachments, research mode, and web search |
 | `bbf1902` | Add solo developer workflow reference for Claude Code |
 | `604b262` | Rename specs/ to intents/ for feature intent documents |
 | `6299eed` | Match Claude AI prompt box behavior |

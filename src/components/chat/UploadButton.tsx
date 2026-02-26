@@ -40,7 +40,7 @@ export function ContextMenu({ onFileSelect }: ContextMenuProps) {
           className="absolute bottom-full left-0 mb-1 w-56 rounded-xl bg-surface p-1.5 z-50"
           style={{ boxShadow: "var(--shadow-dropdown)" }}
         >
-          {/* Add photos */}
+          {/* Add images */}
           <button
             type="button"
             onClick={() => {
@@ -50,7 +50,7 @@ export function ContextMenu({ onFileSelect }: ContextMenuProps) {
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-surface-hover"
           >
             <Image size={16} className="text-text-tertiary shrink-0" />
-            <span className="text-sm text-text-primary">Add photos</span>
+            <span className="text-sm text-text-primary">Add images</span>
           </button>
 
           {/* Research mode */}
