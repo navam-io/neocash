@@ -15,6 +15,10 @@ interface AppContextType {
   setSidebarOpen: (open: boolean) => void;
   selectedModel: string;
   setSelectedModel: (model: string) => void;
+  researchMode: boolean;
+  setResearchMode: (on: boolean) => void;
+  webSearch: boolean;
+  setWebSearch: (on: boolean) => void;
   activeChatId: string | null;
   setActiveChatId: (id: string | null) => void;
   chatListVersion: number;
@@ -26,6 +30,8 @@ const AppContext = createContext<AppContextType | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+  const [researchMode, setResearchMode] = useState(false);
+  const [webSearch, setWebSearch] = useState(false);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatListVersion, setChatListVersion] = useState(0);
 
@@ -46,6 +52,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSidebarOpen,
         selectedModel,
         setSelectedModel,
+        researchMode,
+        setResearchMode,
+        webSearch,
+        setWebSearch,
         activeChatId,
         setActiveChatId,
         chatListVersion,

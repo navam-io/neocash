@@ -7,12 +7,24 @@ export const maxDuration = 60;
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { messages, model } = body;
+    const { messages, model, researchMode, webSearch } = body;
 
     const result = streamText({
       model: anthropic(model || "claude-sonnet-4-6"),
       system: SYSTEM_PROMPT,
       messages: await convertToModelMessages(messages),
+      ...(researchMode && {
+        providerOptions: {
+          anthropic: {
+            thinking: { type: "enabled", budgetTokens: 10000 },
+          },
+        },
+      }),
+      ...(webSearch && {
+        tools: {
+          webSearch: anthropic.tools.webSearch_20250305(),
+        },
+      }),
     });
 
     return result.toTextStreamResponse();

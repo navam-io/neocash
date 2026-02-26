@@ -39,7 +39,7 @@ export default function NewChatPage() {
         <ChatGreeting />
 
         <ChatInput
-          onSend={startChat}
+          onSend={(text) => startChat(text)}
           autoFocus
           value={inputValue}
           onChange={setInputValue}
