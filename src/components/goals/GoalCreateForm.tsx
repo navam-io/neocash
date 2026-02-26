@@ -20,10 +20,13 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [generateError, setGenerateError] = useState(false);
 
   async function handleGenerate() {
     if (!title.trim()) return;
     setGenerating(true);
+    setGenerateError(false);
     try {
       const resp = await fetch("/api/generate-goal-prompt", {
         method: "POST",
@@ -33,9 +36,11 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
       if (resp.ok) {
         const data = await resp.json();
         setDescription(data.prompt);
+      } else {
+        setGenerateError(true);
       }
     } catch {
-      // Best-effort generation
+      setGenerateError(true);
     } finally {
       setGenerating(false);
     }
@@ -43,23 +48,27 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim()) return;
-
-    const id = nanoid(10);
-    const trimmedTitle = title.trim();
-    const goalDescription = description.trim() || trimmedTitle;
-    await createGoal(id, selectedModel, trimmedTitle, category || undefined, goalDescription, "custom");
-    setActiveChatId(id);
-    refreshGoalList();
-    refreshChatList();
-    // Fire-and-forget: scan existing chats for signals relevant to this new goal
-    scanExistingChatsForSignals(id, trimmedTitle, goalDescription, category || undefined).then(() => refreshGoalList());
-    // Use the description as kickoff message if available, otherwise generic
-    const kickoff = goalDescription !== trimmedTitle
-      ? goalDescription
-      : `Help me work on my goal: ${trimmedTitle}. What information do you need to get started, and what are the first steps?`;
-    router.push(`/chat/${id}?message=${encodeURIComponent(kickoff)}`);
-    onClose();
+    if (!title.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const id = nanoid(10);
+      const trimmedTitle = title.trim();
+      const goalDescription = description.trim() || trimmedTitle;
+      await createGoal(id, selectedModel, trimmedTitle, category || undefined, goalDescription, "custom");
+      setActiveChatId(id);
+      refreshGoalList();
+      refreshChatList();
+      // Fire-and-forget: scan existing chats for signals relevant to this new goal
+      scanExistingChatsForSignals(id, trimmedTitle, goalDescription, category || undefined).then(() => refreshGoalList());
+      // Use the description as kickoff message if available, otherwise generic
+      const kickoff = goalDescription !== trimmedTitle
+        ? goalDescription
+        : `Help me work on my goal: ${trimmedTitle}. What information do you need to get started, and what are the first steps?`;
+      router.push(`/chat/${id}?message=${encodeURIComponent(kickoff)}`);
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -83,7 +92,7 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
         <button
           type="button"
           onClick={handleGenerate}
-          disabled={!title.trim() || generating}
+          disabled={!title.trim() || generating || submitting}
           className="absolute right-1.5 bottom-1.5 flex items-center gap-1 rounded-md bg-accent/10 px-2 py-1 text-xs text-accent hover:bg-accent/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {generating ? (
@@ -94,6 +103,9 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
           Generate
         </button>
       </div>
+      {generateError && (
+        <p className="text-xs text-red-500 -mt-1">Generation failed — try again or write your own</p>
+      )}
       <select
         value={category}
         onChange={(e) => setCategory(e.target.value)}
@@ -111,7 +123,7 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={!title.trim()}
+          disabled={!title.trim() || submitting}
           className="flex-1 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Create

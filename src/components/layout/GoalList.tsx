@@ -74,19 +74,17 @@ export function GoalList() {
                 activeChatId === goal.id
                   ? "bg-sidebar-active text-text-primary"
                   : goal.goal?.status === "completed"
-                    ? "text-text-tertiary hover:bg-sidebar-hover"
+                    ? "text-text-secondary opacity-50 hover:bg-sidebar-hover"
                     : "text-text-secondary hover:bg-sidebar-hover"
               }`}
             >
               <Target
                 size={14}
                 className={`shrink-0 ${
-                  goal.goal?.status === "completed"
-                    ? "text-text-tertiary"
-                    : goal.goal?.origin === "custom"
-                      ? "text-blue-500"
-                      : "text-accent"
-                }`}
+                  goal.goal?.origin === "custom"
+                    ? "text-blue-500"
+                    : "text-accent"
+                } ${goal.goal?.status === "completed" ? "opacity-40" : ""}`}
               />
               <span className="truncate text-sm flex-1">
                 {goal.title || "New goal"}

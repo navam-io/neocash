@@ -85,14 +85,6 @@ export async function toggleCrossPollination(id: string): Promise<void> {
   }
 }
 
-export async function setCrossPollination(id: string, value: boolean): Promise<void> {
-  const chat = await getChat(id);
-  if (chat?.goal) {
-    chat.goal.crossPollinate = value;
-    await set(chatKey(id), { ...chat, updatedAt: Date.now() });
-  }
-}
-
 export async function incrementGoalSignals(id: string): Promise<void> {
   const chat = await getChat(id);
   if (chat?.goal) {
@@ -104,6 +96,7 @@ export async function incrementGoalSignals(id: string): Promise<void> {
 /**
  * Scan existing regular chats for signals relevant to a newly created goal.
  * Best-effort, non-blocking — intended to be called fire-and-forget.
+ * Batches all assistant messages per chat into a single API call.
  */
 export async function scanExistingChatsForSignals(
   goalId: string,
@@ -121,6 +114,8 @@ export async function scanExistingChatsForSignals(
         .filter((m) => m.role === "assistant")
         .slice(-3);
 
+      // Batch: concatenate all qualifying messages for this chat
+      const batchedTexts: { msgId: string; text: string }[] = [];
       for (const msg of assistantMessages) {
         const text =
           msg.parts
@@ -129,34 +124,41 @@ export async function scanExistingChatsForSignals(
             )
             .map((p) => p.text)
             .join("") || "";
+        if (text.length > 50) {
+          batchedTexts.push({ msgId: msg.id, text: text.slice(0, 1200) });
+        }
+      }
 
-        if (text.length <= 50) continue;
+      if (batchedTexts.length === 0) continue;
 
-        const resp = await fetch("/api/detect-signals", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            responseText: text.slice(0, 2000),
-            goals: [{ id: goalId, title, description, category: category || "" }],
-          }),
-        });
+      // Single API call per chat with all messages concatenated
+      const combined = batchedTexts.map((t) => t.text).join("\n---\n");
+      const resp = await fetch("/api/detect-signals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          responseText: combined.slice(0, 4000),
+          goals: [{ id: goalId, title, description, category: category || "" }],
+        }),
+      });
 
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data.signals && data.signals.length > 0) {
-            for (const sig of data.signals) {
-              await saveSignal({
-                id: nanoid(10),
-                goalId: sig.goalId,
-                sourceChatId: chat.id,
-                sourceMessageId: msg.id,
-                summary: sig.summary,
-                category: sig.category,
-                createdAt: Date.now(),
-              });
-              await incrementGoalSignals(sig.goalId);
-              totalSignals++;
-            }
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.signals && data.signals.length > 0) {
+          // Use the last message ID as source for all signals from this chat
+          const sourceMessageId = batchedTexts[batchedTexts.length - 1].msgId;
+          for (const sig of data.signals) {
+            await saveSignal({
+              id: nanoid(10),
+              goalId: sig.goalId,
+              sourceChatId: chat.id,
+              sourceMessageId,
+              summary: sig.summary,
+              category: sig.category,
+              createdAt: Date.now(),
+            });
+            await incrementGoalSignals(sig.goalId);
+            totalSignals++;
           }
         }
       }

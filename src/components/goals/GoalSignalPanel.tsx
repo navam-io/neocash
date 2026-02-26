@@ -53,7 +53,21 @@ export function GoalSignalPanel({
         </div>
 
         {/* Signal capture toggle */}
-        <label className={`flex items-center gap-1.5 ${captureDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
+        <div
+          onClick={captureDisabled ? undefined : onTogglePollinate}
+          onKeyDown={captureDisabled ? undefined : (e) => {
+            if (e.key === " " || e.key === "Enter") {
+              e.preventDefault();
+              onTogglePollinate();
+            }
+          }}
+          tabIndex={captureDisabled ? -1 : 0}
+          className={`flex items-center gap-1.5 ${captureDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+          role="switch"
+          aria-checked={goal.crossPollinate}
+          aria-disabled={captureDisabled}
+          aria-label="Capture signals"
+        >
           <Radio
             size={12}
             className={goal.crossPollinate && !captureDisabled ? "text-accent" : "text-text-tertiary"}
@@ -61,20 +75,18 @@ export function GoalSignalPanel({
           <span className="text-xs text-text-secondary">
             Capture signals
           </span>
-          <button
-            onClick={captureDisabled ? undefined : onTogglePollinate}
-            disabled={captureDisabled}
+          <span
             className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
               goal.crossPollinate && !captureDisabled ? "bg-accent" : "bg-border"
-            } ${captureDisabled ? "cursor-not-allowed" : ""}`}
+            }`}
           >
             <span
               className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${
                 goal.crossPollinate && !captureDisabled ? "translate-x-3.5" : "translate-x-0.5"
               }`}
             />
-          </button>
-        </label>
+          </span>
+        </div>
 
         {/* Signal count */}
         {signals.length > 0 && (

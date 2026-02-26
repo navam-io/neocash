@@ -54,18 +54,19 @@ export function PromptCategories({
   }, [activeCategory, goalListVersion]);
 
   useEffect(() => {
-    if (activeCategory === null) return;
+    if (activeCategory === null && !showGoalForm) return;
 
     function handleMouseDown(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setActiveCategory(null);
+        setShowGoalForm(false);
         onPreview?.("");
       }
     }
 
     document.addEventListener("mousedown", handleMouseDown);
     return () => document.removeEventListener("mousedown", handleMouseDown);
-  }, [activeCategory, onPreview]);
+  }, [activeCategory, showGoalForm, onPreview]);
 
   const activeData = promptCategories.find((c) => c.id === activeCategory);
 
@@ -92,6 +93,7 @@ export function PromptCategories({
                 onClick={() => {
                   const next = isActive ? null : category.id;
                   setActiveCategory(next);
+                  setShowGoalForm(false);
                   if (!next) onPreview?.("");
                 }}
                 className={`category-tab flex items-center gap-1.5 rounded-lg px-3 h-8 text-sm ${
