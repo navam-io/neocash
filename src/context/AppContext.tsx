@@ -5,8 +5,10 @@ import {
   useContext,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
+import type { FileUIPart } from "ai";
 import { DEFAULT_MODEL } from "@/lib/constants";
 
 interface AppContextType {
@@ -23,6 +25,7 @@ interface AppContextType {
   setActiveChatId: (id: string | null) => void;
   chatListVersion: number;
   refreshChatList: () => void;
+  pendingFiles: React.RefObject<FileUIPart[]>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -34,6 +37,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [webSearch, setWebSearch] = useState(false);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatListVersion, setChatListVersion] = useState(0);
+  const pendingFiles = useRef<FileUIPart[]>([]);
 
   const toggleSidebar = useCallback(
     () => setSidebarOpen((prev) => !prev),
@@ -60,6 +64,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setActiveChatId,
         chatListVersion,
         refreshChatList,
+        pendingFiles,
       }}
     >
       {children}

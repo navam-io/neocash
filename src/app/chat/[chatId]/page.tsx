@@ -16,7 +16,7 @@ export default function ChatPage({
 }) {
   const { chatId } = use(params);
   const searchParams = useSearchParams();
-  const { selectedModel, researchMode, webSearch, setActiveChatId, refreshChatList } = useApp();
+  const { selectedModel, researchMode, webSearch, setActiveChatId, refreshChatList, pendingFiles } = useApp();
   const [initialLoaded, setInitialLoaded] = useState(false);
 
   const { messages, sendMessage, stop, setMessages, status } = useChat({
@@ -56,9 +56,11 @@ export default function ChatPage({
     const initialMessage = searchParams.get("message");
     if (initialMessage && messages.length === 0) {
       window.history.replaceState({}, "", `/chat/${chatId}`);
-      sendMessage({ text: initialMessage });
+      const files = pendingFiles.current.length > 0 ? pendingFiles.current : undefined;
+      pendingFiles.current = [];
+      sendMessage({ text: initialMessage, files });
     }
-  }, [initialLoaded, searchParams, chatId, messages.length, sendMessage]);
+  }, [initialLoaded, searchParams, chatId, messages.length, sendMessage, pendingFiles]);
 
   // Persist messages to IndexedDB whenever they change
   useEffect(() => {
