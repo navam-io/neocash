@@ -88,6 +88,27 @@ Persistent goal threads with AI-powered cross-pollination for wealth management 
 
 ---
 
+### Improve Goals — [`intents/improve-goals.md`](intents/improve-goals.md)
+
+UX polish, signal quality improvements, and discoverability enhancements for Goal Threads.
+
+- Click-outside-to-dismiss for all category dropdowns on new chat screen
+- Existing goals shown in Goals dropdown with Target icon and signal count pill (click navigates, no duplication)
+- Goal creation "+" moved from sidebar to Goals tab on new chat screen
+- "Cross-pollinate" renamed to "Capture signals" in goal signal panel
+- Signal capture toggle grays out and auto-disables when goal is paused or completed
+- AI-generated goal descriptions via Haiku: "Generate" button creates structured prompt from title
+- Goal description textarea in creation form (user can review/edit before saving)
+- Description flows into IndexedDB, signal detection prompt, and kickoff message
+- Signal detection API now includes goal description for richer Haiku matching
+- Visual distinction: custom goals get blue icons, predefined goals keep copper accent
+- `origin` field on GoalMeta for backwards-compatible custom/predefined discrimination
+- Hover-to-preview: hovering goal prompts in dropdown shows prompt text as input placeholder
+
+**Commits:** `a4cf8b8` Click-outside-to-dismiss · `404d884` Show existing goals in dropdown · `bd9b88f` Move "+" to Goals tab · `b2c9fba` Rename to "Capture signals" · `383c182` Disable capture when paused/completed · `1758dee` AI-generated goal descriptions · `d6902de` Include description in signal detection · `9fd0e91` Visual distinction for goal types · `f487dbd` Hover-to-preview prompts · `e7d01d7` Code review fixes
+
+---
+
 ## Open
 
 _No open intents._
@@ -98,6 +119,16 @@ _No open intents._
 
 | SHA | Message |
 |-----|---------|
+| `e7d01d7` | Fix: address code review findings |
+| `f487dbd` | Hover-to-preview goal prompts in input box placeholder |
+| `9fd0e91` | Visual distinction between custom and predefined goals |
+| `d6902de` | Include goal description in signal detection prompt |
+| `1758dee` | Add AI-generated goal descriptions with Haiku prompt generation |
+| `383c182` | Disable signal capture toggle when goal is paused or completed |
+| `b2c9fba` | Rename "Cross-pollinate" to "Capture signals" in goal panel |
+| `bd9b88f` | Move goal creation "+" to Goals tab on new chat screen |
+| `404d884` | Show existing goals in Goals dropdown with signal counts |
+| `a4cf8b8` | Add click-outside-to-dismiss for category dropdowns |
 | `5e6b5b0` | Fix retroactive signals not appearing reactively in goal signal panel |
 | `4786878` | Add goal threads with cross-pollination, signal detection, and retroactive scanning |
 | `06c21a3` | Add document upload and document management sidebar |
