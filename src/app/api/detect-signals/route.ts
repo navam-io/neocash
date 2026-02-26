@@ -14,7 +14,11 @@ export async function POST(req: Request) {
     const goalList = goals
       .map(
         (g: { id: string; title: string; description: string; category: string }) =>
-          `- ID: ${g.id} | Title: ${g.title} | Category: ${g.category || "general"}`,
+          `- ID: ${g.id} | Title: ${g.title} | Category: ${g.category || "general"}${
+            g.description && g.description !== g.title
+              ? ` | Description: ${g.description}`
+              : ""
+          }`,
       )
       .join("\n");
 
