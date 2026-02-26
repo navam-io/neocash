@@ -1,0 +1,117 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ChevronDown,
+  ChevronRight,
+  Target,
+  Plus,
+  Check,
+} from "lucide-react";
+import { useApp } from "@/context/AppContext";
+import { listGoals } from "@/hooks/useGoalStore";
+import { GoalCreateForm } from "@/components/goals/GoalCreateForm";
+import type { ChatRecord } from "@/types";
+
+function StatusDot({ status }: { status: string }) {
+  if (status === "completed") {
+    return <Check size={10} className="shrink-0 text-text-tertiary" />;
+  }
+  return (
+    <span
+      className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+        status === "active" ? "bg-green-500" : "bg-amber-400"
+      }`}
+    />
+  );
+}
+
+export function GoalList() {
+  const { activeChatId, goalListVersion } = useApp();
+  const router = useRouter();
+  const [goals, setGoals] = useState<ChatRecord[]>([]);
+  const [collapsed, setCollapsed] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    listGoals().then(setGoals);
+  }, [goalListVersion]);
+
+  // Don't render section at all if no goals and form is hidden
+  if (goals.length === 0 && !showForm) return null;
+
+  return (
+    <div className="py-2">
+      {/* Section header */}
+      <div className="flex items-center px-3 pb-1">
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="flex flex-1 items-center gap-1 text-xs font-medium text-text-tertiary uppercase tracking-wider hover:text-text-secondary transition-colors"
+        >
+          {collapsed ? (
+            <ChevronRight size={12} />
+          ) : (
+            <ChevronDown size={12} />
+          )}
+          <span>Goals</span>
+          {goals.length > 0 && (
+            <span className="ml-auto text-[10px] font-normal tabular-nums">
+              {goals.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="ml-1 flex h-5 w-5 items-center justify-center rounded text-text-tertiary hover:text-text-secondary hover:bg-sidebar-hover transition-colors"
+          aria-label="New goal"
+        >
+          <Plus size={12} />
+        </button>
+      </div>
+
+      {/* Create form */}
+      {showForm && <GoalCreateForm onClose={() => setShowForm(false)} />}
+
+      {/* Goal items */}
+      {!collapsed && goals.length > 0 && (
+        <nav
+          className="flex flex-col gap-0.5 px-2 max-h-[240px] overflow-y-auto"
+          aria-label="Goals"
+        >
+          {goals.map((goal) => (
+            <button
+              key={goal.id}
+              onClick={() => router.push(`/chat/${goal.id}`)}
+              className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors ${
+                activeChatId === goal.id
+                  ? "bg-sidebar-active text-text-primary"
+                  : goal.goal?.status === "completed"
+                    ? "text-text-tertiary hover:bg-sidebar-hover"
+                    : "text-text-secondary hover:bg-sidebar-hover"
+              }`}
+            >
+              <Target
+                size={14}
+                className={`shrink-0 ${
+                  goal.goal?.status === "completed"
+                    ? "text-text-tertiary"
+                    : "text-accent"
+                }`}
+              />
+              <span className="truncate text-sm flex-1">
+                {goal.title || "New goal"}
+              </span>
+              <StatusDot status={goal.goal?.status || "active"} />
+              {goal.goal && goal.goal.signalCount > 0 && (
+                <span className="text-xs text-text-tertiary tabular-nums">
+                  {goal.goal.signalCount}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+      )}
+    </div>
+  );
+}

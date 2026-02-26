@@ -65,6 +65,24 @@ Upload wealth-management documents and manage them from the sidebar.
 
 ---
 
+### Goal Threads — [`intents/wealth-goals.md`](intents/wealth-goals.md)
+
+Persistent goal threads with AI-powered cross-pollination for wealth management objectives.
+
+- Goal creation via sidebar "+" button with inline form (title + optional category)
+- Goal creation via new "Goals" prompt category tab (6th tab with 5 goal-oriented prompts)
+- Goal threads as specialized chat threads with goal-specific system prompts
+- Goal signal panel HUD with status control (Active/Paused/Completed), cross-pollination toggle, and signal list
+- Cross-pollination: Haiku auto-detects relevance of regular chat responses to active goals
+- Signal records stored in IndexedDB with source traceability ("View source" links)
+- Sidebar Goals section between Documents and Chats with copper Target icons, status dots, and signal counts
+- ChatList filtered to exclude goal threads (goals shown in dedicated section)
+- Per-goal cross-pollination toggle (on by default)
+
+**Commits:** _pending_
+
+---
+
 ## Open
 
 _No open intents._

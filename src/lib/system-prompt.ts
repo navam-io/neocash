@@ -1,3 +1,5 @@
+import type { GoalMeta, SignalRecord } from "@/types";
+
 export const SYSTEM_PROMPT = `You are NeoCash, a knowledgeable and thoughtful personal wealth management assistant. You help users with:
 
 - **Tax Planning**: Tax-efficient strategies, deductions, credits, filing tips, and tax-advantaged accounts.
@@ -26,3 +28,41 @@ export const SYSTEM_PROMPT = `You are NeoCash, a knowledgeable and thoughtful pe
 ## Tone
 
 Warm, professional, and empowering. You want users to feel confident and informed about their financial decisions. Avoid jargon unless you explain it. Be encouraging but honest about risks.`;
+
+export function buildGoalSystemPrompt(
+  goalTitle: string,
+  goal: GoalMeta,
+  signals: SignalRecord[],
+): string {
+  const recentSignals = signals.slice(0, 10);
+
+  let prompt = SYSTEM_PROMPT;
+
+  prompt += `\n\n## Active Goal Context\n\n`;
+  prompt += `You are helping the user work on a specific financial goal:\n\n`;
+  prompt += `**Goal:** ${goalTitle}\n`;
+  prompt += `**Status:** ${goal.status}\n`;
+  if (goal.category) {
+    prompt += `**Category:** ${goal.category}\n`;
+  }
+  if (goal.description && goal.description !== goalTitle) {
+    prompt += `**Description:** ${goal.description}\n`;
+  }
+
+  if (recentSignals.length > 0) {
+    prompt += `\n### Cross-Pollinated Signals\n\n`;
+    prompt += `The following insights were detected from the user's other conversations that relate to this goal:\n\n`;
+    for (const signal of recentSignals) {
+      prompt += `- **[${signal.category}]** ${signal.summary}\n`;
+    }
+  }
+
+  prompt += `\n### Goal Thread Behavior\n\n`;
+  prompt += `- Stay focused on this specific goal. Keep responses relevant to achieving it.\n`;
+  prompt += `- Reference any cross-pollinated signals when they inform your advice.\n`;
+  prompt += `- Track progress: acknowledge milestones and suggest concrete next steps.\n`;
+  prompt += `- If the user asks something unrelated, gently redirect back to the goal or suggest starting a new conversation.\n`;
+  prompt += `- Proactively suggest actions that advance this goal.\n`;
+
+  return prompt;
+}

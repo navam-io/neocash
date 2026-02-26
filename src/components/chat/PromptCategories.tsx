@@ -7,6 +7,7 @@ import {
   PieChart,
   Wallet,
   Sparkles,
+  Target,
 } from "lucide-react";
 import { promptCategories } from "@/lib/prompts";
 import { PromptSuggestions } from "./PromptSuggestions";
@@ -17,10 +18,11 @@ const iconMap = {
   "pie-chart": PieChart,
   wallet: Wallet,
   sparkles: Sparkles,
+  target: Target,
 } as const;
 
 interface PromptCategoriesProps {
-  onSelectPrompt: (prompt: string) => void;
+  onSelectPrompt: (prompt: string, categoryId?: string, goalTitle?: string) => void;
   visible?: boolean;
   onPrefill?: (text: string) => void;
 }
@@ -48,6 +50,7 @@ export function PromptCategories({
         {promptCategories.map((category) => {
           const Icon = iconMap[category.icon as keyof typeof iconMap];
           const isActive = activeCategory === category.id;
+          const isGoal = category.id === "goals";
 
           return (
             <button
@@ -58,7 +61,9 @@ export function PromptCategories({
               className={`category-tab flex items-center gap-1.5 rounded-lg px-3 h-8 text-sm ${
                 isActive
                   ? "bg-surface text-text-primary shadow-[0_0_0_0.5px_rgba(31,30,29,0.25)]"
-                  : "text-text-secondary hover:bg-surface-hover shadow-[0_0_0_0.5px_rgba(31,30,29,0.12)]"
+                  : isGoal
+                    ? "text-accent hover:bg-surface-hover shadow-[0_0_0_0.5px_rgba(196,112,75,0.3)]"
+                    : "text-text-secondary hover:bg-surface-hover shadow-[0_0_0_0.5px_rgba(31,30,29,0.12)]"
               }`}
             >
               {Icon && <Icon size={14} />}
@@ -74,10 +79,13 @@ export function PromptCategories({
           <PromptSuggestions
             prompts={activeData.prompts}
             onSelect={(prompt) => {
-              if (onPrefill) {
+              if (activeData.id === "goals") {
+                // Goals prompts bypass prefill — create goal thread directly
+                onSelectPrompt(prompt.text, activeData.id, prompt.title);
+              } else if (onPrefill) {
                 onPrefill(prompt.text);
               } else {
-                onSelectPrompt(prompt.title);
+                onSelectPrompt(prompt.title, activeData.id);
               }
               setActiveCategory(null);
             }}

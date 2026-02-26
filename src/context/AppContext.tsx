@@ -27,6 +27,8 @@ interface AppContextType {
   refreshChatList: () => void;
   documentListVersion: number;
   refreshDocumentList: () => void;
+  goalListVersion: number;
+  refreshGoalList: () => void;
   pendingFiles: React.RefObject<FileUIPart[]>;
 }
 
@@ -40,6 +42,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [chatListVersion, setChatListVersion] = useState(0);
   const [documentListVersion, setDocumentListVersion] = useState(0);
+  const [goalListVersion, setGoalListVersion] = useState(0);
   const pendingFiles = useRef<FileUIPart[]>([]);
 
   const toggleSidebar = useCallback(
@@ -52,6 +55,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const refreshDocumentList = useCallback(
     () => setDocumentListVersion((v) => v + 1),
+    [],
+  );
+  const refreshGoalList = useCallback(
+    () => setGoalListVersion((v) => v + 1),
     [],
   );
 
@@ -73,6 +80,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshChatList,
         documentListVersion,
         refreshDocumentList,
+        goalListVersion,
+        refreshGoalList,
         pendingFiles,
       }}
     >

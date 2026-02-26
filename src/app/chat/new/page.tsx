@@ -9,18 +9,33 @@ import { ChatGreeting } from "@/components/chat/ChatGreeting";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { PromptCategories } from "@/components/chat/PromptCategories";
 import { createChat, saveChat } from "@/hooks/useChatHistory";
+import { createGoal, scanExistingChatsForSignals } from "@/hooks/useGoalStore";
 import { saveDocument } from "@/hooks/useDocumentStore";
 
 export default function NewChatPage() {
   const router = useRouter();
-  const { selectedModel, setActiveChatId, refreshChatList, refreshDocumentList, pendingFiles } = useApp();
+  const { selectedModel, setActiveChatId, refreshChatList, refreshGoalList, refreshDocumentList, pendingFiles } = useApp();
   const [inputValue, setInputValue] = useState("");
 
   const categoriesVisible = inputValue.trim().length === 0;
 
   const startChat = useCallback(
-    async (message: string, files?: FileUIPart[]) => {
+    async (message: string, files?: FileUIPart[], categoryId?: string, goalTitle?: string) => {
       const id = nanoid(10);
+
+      // If this is a "goals" category prompt, create a goal thread instead
+      if (categoryId === "goals") {
+        const title = goalTitle || message.slice(0, 60);
+        await createGoal(id, selectedModel, title);
+        setActiveChatId(id);
+        refreshGoalList();
+        refreshChatList();
+        // Fire-and-forget: scan existing chats for signals relevant to this new goal
+        scanExistingChatsForSignals(id, title, title).then(() => refreshGoalList());
+        router.push(`/chat/${id}?message=${encodeURIComponent(message)}`);
+        return;
+      }
+
       const chat = await createChat(id, selectedModel);
       chat.title = message.slice(0, 60);
       await saveChat(chat);
@@ -45,7 +60,7 @@ export default function NewChatPage() {
       }
       router.push(`/chat/${id}?message=${encodeURIComponent(message)}`);
     },
-    [selectedModel, setActiveChatId, refreshChatList, refreshDocumentList, pendingFiles, router],
+    [selectedModel, setActiveChatId, refreshChatList, refreshGoalList, refreshDocumentList, pendingFiles, router],
   );
 
   function handlePrefill(text: string) {
@@ -65,7 +80,13 @@ export default function NewChatPage() {
         />
 
         <PromptCategories
-          onSelectPrompt={startChat}
+          onSelectPrompt={(prompt, categoryId, goalTitle) => {
+            if (categoryId === "goals") {
+              startChat(prompt, undefined, categoryId, goalTitle);
+            } else {
+              startChat(prompt);
+            }
+          }}
           visible={categoriesVisible}
           onPrefill={handlePrefill}
         />
