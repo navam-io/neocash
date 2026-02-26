@@ -78,6 +78,14 @@ export async function toggleCrossPollination(id: string): Promise<void> {
   }
 }
 
+export async function setCrossPollination(id: string, value: boolean): Promise<void> {
+  const chat = await getChat(id);
+  if (chat?.goal) {
+    chat.goal.crossPollinate = value;
+    await set(chatKey(id), { ...chat, updatedAt: Date.now() });
+  }
+}
+
 export async function incrementGoalSignals(id: string): Promise<void> {
   const chat = await getChat(id);
   if (chat?.goal) {

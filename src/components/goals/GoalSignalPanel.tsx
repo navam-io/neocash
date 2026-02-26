@@ -51,28 +51,34 @@ export function GoalSignalPanel({
           </select>
         </div>
 
-        {/* Cross-pollination toggle */}
-        <label className="flex items-center gap-1.5 cursor-pointer">
-          <Radio
-            size={12}
-            className={goal.crossPollinate ? "text-accent" : "text-text-tertiary"}
-          />
-          <span className="text-xs text-text-secondary">
-            Capture signals
-          </span>
-          <button
-            onClick={onTogglePollinate}
-            className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-              goal.crossPollinate ? "bg-accent" : "bg-border"
-            }`}
-          >
-            <span
-              className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${
-                goal.crossPollinate ? "translate-x-3.5" : "translate-x-0.5"
-              }`}
-            />
-          </button>
-        </label>
+        {/* Signal capture toggle */}
+        {(() => {
+          const isDisabled = goal.status !== "active";
+          return (
+            <label className={`flex items-center gap-1.5 ${isDisabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}>
+              <Radio
+                size={12}
+                className={goal.crossPollinate && !isDisabled ? "text-accent" : "text-text-tertiary"}
+              />
+              <span className="text-xs text-text-secondary">
+                Capture signals
+              </span>
+              <button
+                onClick={isDisabled ? undefined : onTogglePollinate}
+                disabled={isDisabled}
+                className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+                  goal.crossPollinate && !isDisabled ? "bg-accent" : "bg-border"
+                } ${isDisabled ? "cursor-not-allowed" : ""}`}
+              >
+                <span
+                  className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${
+                    goal.crossPollinate && !isDisabled ? "translate-x-3.5" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </label>
+          );
+        })()}
 
         {/* Signal count */}
         {signals.length > 0 && (
