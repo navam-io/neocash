@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Receipt,
   TrendingUp,
@@ -33,11 +33,26 @@ export function PromptCategories({
   onPrefill,
 }: PromptCategoriesProps) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (activeCategory === null) return;
+
+    function handleMouseDown(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setActiveCategory(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, [activeCategory]);
 
   const activeData = promptCategories.find((c) => c.id === activeCategory);
 
   return (
     <div
+      ref={containerRef}
       className="flex flex-col items-center gap-3 w-full transition-all duration-300 ease-in-out"
       style={{
         opacity: visible ? 1 : 0,
