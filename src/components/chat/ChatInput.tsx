@@ -114,17 +114,27 @@ export function ChatInput({
         style={{ boxShadow: "var(--shadow-input)" }}
       >
         {/* Textarea area */}
-        <div className="px-4 pt-3 pb-1">
+        <div className="relative px-4 pt-3 pb-1">
           <textarea
             ref={textareaRef}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={previewText || APP_PLACEHOLDER}
+            placeholder={previewText ? "" : APP_PLACEHOLDER}
             rows={1}
             className="chat-textarea w-full bg-transparent text-text-primary placeholder:text-text-placeholder outline-none"
             style={{ fontWeight: 430 }}
           />
+          {previewText && !value && (
+            <div className="pointer-events-none absolute inset-0 px-4 pt-3 pb-1">
+              <div
+                className="preview-clamp text-text-placeholder break-words"
+                style={{ fontWeight: 430 }}
+              >
+                {previewText}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Preview/indicator area */}

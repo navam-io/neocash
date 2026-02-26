@@ -91,10 +91,17 @@ body {
 /* ─── Input autoresize ─────────────────────────── */
 .chat-textarea {
   field-sizing: content;
-  min-height: 24px;
+  min-height: 3lh;
   max-height: 200px;
   overflow-y: auto;
   resize: none;
+}
+
+.preview-clamp {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ─── Markdown prose ───────────────────────────── */
