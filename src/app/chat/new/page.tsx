@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { nanoid } from "nanoid";
+import type { FileUIPart } from "ai";
 import { useApp } from "@/context/AppContext";
 import { ChatGreeting } from "@/components/chat/ChatGreeting";
 import { ChatInput } from "@/components/chat/ChatInput";
@@ -11,22 +12,25 @@ import { createChat, saveChat } from "@/hooks/useChatHistory";
 
 export default function NewChatPage() {
   const router = useRouter();
-  const { selectedModel, setActiveChatId, refreshChatList } = useApp();
+  const { selectedModel, setActiveChatId, refreshChatList, pendingFiles } = useApp();
   const [inputValue, setInputValue] = useState("");
 
   const categoriesVisible = inputValue.trim().length === 0;
 
   const startChat = useCallback(
-    async (message: string) => {
+    async (message: string, files?: FileUIPart[]) => {
       const id = nanoid(10);
       const chat = await createChat(id, selectedModel);
       chat.title = message.slice(0, 60);
       await saveChat(chat);
       setActiveChatId(id);
       refreshChatList();
+      if (files && files.length > 0) {
+        pendingFiles.current = files;
+      }
       router.push(`/chat/${id}?message=${encodeURIComponent(message)}`);
     },
-    [selectedModel, setActiveChatId, refreshChatList, router],
+    [selectedModel, setActiveChatId, refreshChatList, pendingFiles, router],
   );
 
   function handlePrefill(text: string) {
@@ -39,7 +43,7 @@ export default function NewChatPage() {
         <ChatGreeting />
 
         <ChatInput
-          onSend={startChat}
+          onSend={(text, files) => startChat(text, files)}
           autoFocus
           value={inputValue}
           onChange={setInputValue}

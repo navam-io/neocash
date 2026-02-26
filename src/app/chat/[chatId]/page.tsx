@@ -16,14 +16,14 @@ export default function ChatPage({
 }) {
   const { chatId } = use(params);
   const searchParams = useSearchParams();
-  const { selectedModel, setActiveChatId, refreshChatList } = useApp();
+  const { selectedModel, researchMode, webSearch, setActiveChatId, refreshChatList, pendingFiles } = useApp();
   const [initialLoaded, setInitialLoaded] = useState(false);
 
   const { messages, sendMessage, stop, setMessages, status } = useChat({
     id: chatId,
     transport: new TextStreamChatTransport({
       api: "/api/chat",
-      body: { model: selectedModel },
+      body: { model: selectedModel, researchMode, webSearch },
     }),
     onFinish: async () => {
       refreshChatList();
@@ -56,9 +56,11 @@ export default function ChatPage({
     const initialMessage = searchParams.get("message");
     if (initialMessage && messages.length === 0) {
       window.history.replaceState({}, "", `/chat/${chatId}`);
-      sendMessage({ text: initialMessage });
+      const files = pendingFiles.current.length > 0 ? pendingFiles.current : undefined;
+      pendingFiles.current = [];
+      sendMessage({ text: initialMessage, files });
     }
-  }, [initialLoaded, searchParams, chatId, messages.length, sendMessage]);
+  }, [initialLoaded, searchParams, chatId, messages.length, sendMessage, pendingFiles]);
 
   // Persist messages to IndexedDB whenever they change
   useEffect(() => {
@@ -92,7 +94,7 @@ export default function ChatPage({
       <div className="shrink-0 px-4 pb-4">
         <div className="mx-auto max-w-2xl">
           <ChatInput
-            onSend={(text) => sendMessage({ text })}
+            onSend={(text, files) => sendMessage({ text, files })}
             onStop={stop}
             isLoading={isLoading}
           />

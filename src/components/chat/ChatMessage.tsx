@@ -20,9 +20,17 @@ function getMessageText(message: UIMessage): string {
   return "";
 }
 
+function getMessageImages(message: UIMessage): { url: string; filename?: string }[] {
+  if (!message.parts) return [];
+  return message.parts
+    .filter((p) => p.type === "file" && p.mediaType.startsWith("image/"))
+    .map((p) => ({ url: (p as { url: string; filename?: string }).url, filename: (p as { filename?: string }).filename }));
+}
+
 export function ChatMessage({ message, isLoading }: ChatMessageProps) {
   const isUser = message.role === "user";
   const text = getMessageText(message);
+  const images = isUser ? getMessageImages(message) : [];
 
   return (
     <div className={`w-full ${isUser ? "flex justify-end" : ""}`}>
@@ -39,7 +47,23 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
         }
       >
         {isUser ? (
-          <p className="text-text-primary whitespace-pre-wrap">{text}</p>
+          <>
+            {images.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {images.map((img, i) => (
+                  <img
+                    key={i}
+                    src={img.url}
+                    alt={img.filename || "Attached image"}
+                    className="max-h-48 rounded-lg"
+                  />
+                ))}
+              </div>
+            )}
+            {text && (
+              <p className="text-text-primary whitespace-pre-wrap">{text}</p>
+            )}
+          </>
         ) : isLoading && !text ? (
           <LoadingDots />
         ) : (
