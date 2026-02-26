@@ -78,8 +78,13 @@ Persistent goal threads with AI-powered cross-pollination for wealth management 
 - Sidebar Goals section between Documents and Chats with copper Target icons, status dots, and signal counts
 - ChatList filtered to exclude goal threads (goals shown in dedicated section)
 - Per-goal cross-pollination toggle (on by default)
+- Goal title displayed in signal panel header with Target icon and vertical divider
+- Clean goal titles from Goals prompt tab (uses prompt.title instead of truncated prompt text)
+- Goals tab copper accent styling to stand out from other category tabs
+- Retroactive signal scanning: new goals scan last 10 existing chats for relevant signals on creation
+- Reactive signal panel updates when background scan completes
 
-**Commits:** _pending_
+**Commits:** `4786878` Add goal threads with cross-pollination, signal detection, and retroactive scanning · `5e6b5b0` Fix retroactive signals not appearing reactively in goal signal panel
 
 ---
 
@@ -93,6 +98,8 @@ _No open intents._
 
 | SHA | Message |
 |-----|---------|
+| `5e6b5b0` | Fix retroactive signals not appearing reactively in goal signal panel |
+| `4786878` | Add goal threads with cross-pollination, signal detection, and retroactive scanning |
 | `06c21a3` | Add document upload and document management sidebar |
 | `ae08f6f` | Fix image attachments not sent to API during new chat redirect |
 | `490b416` | Add context dropdown with image attachments, research mode, and web search |
