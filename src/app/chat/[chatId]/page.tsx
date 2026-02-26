@@ -40,6 +40,7 @@ export default function ChatPage({
     refreshChatList,
     refreshDocumentList,
     refreshGoalList,
+    goalListVersion,
     pendingFiles,
   } = useApp();
   const [initialLoaded, setInitialLoaded] = useState(false);
@@ -182,6 +183,12 @@ export default function ChatPage({
     }
     load();
   }, [chatId, setMessages]);
+
+  // Re-fetch signals when goalListVersion changes (e.g., after retroactive scan)
+  useEffect(() => {
+    if (!goalMeta) return;
+    listSignalsForGoal(chatId).then(setSignals);
+  }, [goalListVersion, chatId, goalMeta]);
 
   // Handle initial message from URL param (new chat flow)
   useEffect(() => {
