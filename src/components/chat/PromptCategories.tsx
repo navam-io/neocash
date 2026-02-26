@@ -9,8 +9,12 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { promptCategories } from "@/lib/prompts";
 import { PromptSuggestions } from "./PromptSuggestions";
+import { useApp } from "@/context/AppContext";
+import { listGoals } from "@/hooks/useGoalStore";
+import type { ChatRecord } from "@/types";
 
 const iconMap = {
   receipt: Receipt,
@@ -33,7 +37,16 @@ export function PromptCategories({
   onPrefill,
 }: PromptCategoriesProps) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [existingGoals, setExistingGoals] = useState<ChatRecord[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { goalListVersion } = useApp();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (activeCategory === "goals") {
+      listGoals().then(setExistingGoals);
+    }
+  }, [activeCategory, goalListVersion]);
 
   useEffect(() => {
     if (activeCategory === null) return;
@@ -93,6 +106,11 @@ export function PromptCategories({
         <div className="w-full max-w-lg">
           <PromptSuggestions
             prompts={activeData.prompts}
+            existingGoals={activeData.id === "goals" ? existingGoals : undefined}
+            onGoalNavigate={(goalId) => {
+              setActiveCategory(null);
+              router.push(`/chat/${goalId}`);
+            }}
             onSelect={(prompt) => {
               if (activeData.id === "goals") {
                 // Goals prompts bypass prefill — create goal thread directly
