@@ -48,7 +48,7 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
     const id = nanoid(10);
     const trimmedTitle = title.trim();
     const goalDescription = description.trim() || trimmedTitle;
-    await createGoal(id, selectedModel, trimmedTitle, category || undefined, goalDescription);
+    await createGoal(id, selectedModel, trimmedTitle, category || undefined, goalDescription, "custom");
     setActiveChatId(id);
     refreshGoalList();
     refreshChatList();

@@ -32,7 +32,7 @@ export function PromptSuggestions({
               onClick={() => onGoalNavigate?.(goal.id)}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-text-primary transition-colors hover:bg-surface-hover"
             >
-              <Target size={14} className="shrink-0 text-accent" />
+              <Target size={14} className={`shrink-0 ${goal.goal?.origin === "custom" ? "text-blue-500" : "text-accent"}`} />
               <span className="truncate">{goal.title}</span>
               {(goal.goal?.signalCount ?? 0) > 0 && (
                 <span className="ml-auto flex shrink-0 items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs text-accent">

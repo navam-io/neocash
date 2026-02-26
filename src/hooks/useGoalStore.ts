@@ -22,6 +22,7 @@ export async function createGoal(
   title: string,
   category?: string,
   description?: string,
+  origin?: "custom" | "predefined",
 ): Promise<ChatRecord> {
   const chat = await createChat(id, model);
   chat.title = title;
@@ -32,6 +33,7 @@ export async function createGoal(
     category,
     signalCount: 0,
     crossPollinate: true,
+    origin: origin || "custom",
   };
   await set(chatKey(id), chat);
   return chat;

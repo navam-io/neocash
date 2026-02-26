@@ -26,7 +26,7 @@ export default function NewChatPage() {
       // If this is a "goals" category prompt, create a goal thread instead
       if (categoryId === "goals") {
         const title = goalTitle || message.slice(0, 60);
-        await createGoal(id, selectedModel, title, undefined, message);
+        await createGoal(id, selectedModel, title, undefined, message, "predefined");
         setActiveChatId(id);
         refreshGoalList();
         refreshChatList();

@@ -9,6 +9,7 @@ export interface GoalMeta {
   category?: string;           // matches prompt category ids: "tax", "investing", etc.
   signalCount: number;
   crossPollinate: boolean;     // toggleable per goal (default: true)
+  origin?: "custom" | "predefined";  // custom = "+" form, predefined = Goals tab prompt
 }
 
 export interface SignalRecord {

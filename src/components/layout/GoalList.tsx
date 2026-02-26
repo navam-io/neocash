@@ -83,7 +83,9 @@ export function GoalList() {
                 className={`shrink-0 ${
                   goal.goal?.status === "completed"
                     ? "text-text-tertiary"
-                    : "text-accent"
+                    : goal.goal?.origin === "custom"
+                      ? "text-blue-500"
+                      : "text-accent"
                 }`}
               />
               <span className="truncate text-sm flex-1">
