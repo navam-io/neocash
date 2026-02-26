@@ -26,12 +26,12 @@ export default function NewChatPage() {
       // If this is a "goals" category prompt, create a goal thread instead
       if (categoryId === "goals") {
         const title = goalTitle || message.slice(0, 60);
-        await createGoal(id, selectedModel, title);
+        await createGoal(id, selectedModel, title, undefined, message);
         setActiveChatId(id);
         refreshGoalList();
         refreshChatList();
         // Fire-and-forget: scan existing chats for signals relevant to this new goal
-        scanExistingChatsForSignals(id, title, title).then(() => refreshGoalList());
+        scanExistingChatsForSignals(id, title, message).then(() => refreshGoalList());
         router.push(`/chat/${id}?message=${encodeURIComponent(message)}`);
         return;
       }

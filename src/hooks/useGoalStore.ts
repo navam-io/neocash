@@ -21,12 +21,13 @@ export async function createGoal(
   model: string,
   title: string,
   category?: string,
+  description?: string,
 ): Promise<ChatRecord> {
   const chat = await createChat(id, model);
   chat.title = title;
   chat.goal = {
     type: "goal",
-    description: title,
+    description: description || title,
     status: "active",
     category,
     signalCount: 0,
