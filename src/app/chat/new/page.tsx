@@ -16,6 +16,7 @@ export default function NewChatPage() {
   const router = useRouter();
   const { selectedModel, setActiveChatId, refreshChatList, refreshGoalList, refreshDocumentList, pendingFiles } = useApp();
   const [inputValue, setInputValue] = useState("");
+  const [previewText, setPreviewText] = useState("");
 
   const categoriesVisible = inputValue.trim().length === 0;
 
@@ -77,10 +78,12 @@ export default function NewChatPage() {
           autoFocus
           value={inputValue}
           onChange={setInputValue}
+          previewText={previewText}
         />
 
         <PromptCategories
           onSelectPrompt={(prompt, categoryId, goalTitle) => {
+            setPreviewText("");
             if (categoryId === "goals") {
               startChat(prompt, undefined, categoryId, goalTitle);
             } else {
@@ -89,6 +92,7 @@ export default function NewChatPage() {
           }}
           visible={categoriesVisible}
           onPrefill={handlePrefill}
+          onPreview={setPreviewText}
         />
       </div>
     </div>

@@ -8,6 +8,7 @@ interface PromptSuggestionsProps {
   onSelect: (prompt: Prompt) => void;
   existingGoals?: ChatRecord[];
   onGoalNavigate?: (goalId: string) => void;
+  onPreview?: (text: string) => void;
 }
 
 export function PromptSuggestions({
@@ -15,6 +16,7 @@ export function PromptSuggestions({
   onSelect,
   existingGoals,
   onGoalNavigate,
+  onPreview,
 }: PromptSuggestionsProps) {
   const hasExistingGoals = existingGoals && existingGoals.length > 0;
 
@@ -30,6 +32,8 @@ export function PromptSuggestions({
             <button
               key={goal.id}
               onClick={() => onGoalNavigate?.(goal.id)}
+              onMouseEnter={() => onPreview?.(goal.goal?.description || goal.title)}
+              onMouseLeave={() => onPreview?.("")}
               className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-text-primary transition-colors hover:bg-surface-hover"
             >
               <Target size={14} className={`shrink-0 ${goal.goal?.origin === "custom" ? "text-blue-500" : "text-accent"}`} />
@@ -51,6 +55,8 @@ export function PromptSuggestions({
         <button
           key={prompt.title}
           onClick={() => onSelect(prompt)}
+          onMouseEnter={() => onPreview?.(prompt.text)}
+          onMouseLeave={() => onPreview?.("")}
           className="flex w-full rounded-lg px-3 py-2.5 text-left text-sm text-text-secondary transition-colors hover:bg-surface-hover"
         >
           {prompt.title}

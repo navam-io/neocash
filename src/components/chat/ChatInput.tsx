@@ -27,6 +27,7 @@ interface ChatInputProps {
   initialValue?: string;
   value?: string;
   onChange?: (value: string) => void;
+  previewText?: string;
 }
 
 export function ChatInput({
@@ -37,6 +38,7 @@ export function ChatInput({
   initialValue = "",
   value: controlledValue,
   onChange: controlledOnChange,
+  previewText = "",
 }: ChatInputProps) {
   const { researchMode, webSearch } = useApp();
   const isControlled = controlledValue !== undefined && controlledOnChange !== undefined;
@@ -118,7 +120,7 @@ export function ChatInput({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={APP_PLACEHOLDER}
+            placeholder={previewText || APP_PLACEHOLDER}
             rows={1}
             className="chat-textarea w-full bg-transparent text-text-primary placeholder:text-text-placeholder outline-none"
             style={{ fontWeight: 430 }}

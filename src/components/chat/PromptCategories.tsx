@@ -31,12 +31,14 @@ interface PromptCategoriesProps {
   onSelectPrompt: (prompt: string, categoryId?: string, goalTitle?: string) => void;
   visible?: boolean;
   onPrefill?: (text: string) => void;
+  onPreview?: (text: string) => void;
 }
 
 export function PromptCategories({
   onSelectPrompt,
   visible = true,
   onPrefill,
+  onPreview,
 }: PromptCategoriesProps) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [existingGoals, setExistingGoals] = useState<ChatRecord[]>([]);
@@ -57,12 +59,13 @@ export function PromptCategories({
     function handleMouseDown(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setActiveCategory(null);
+        onPreview?.("");
       }
     }
 
     document.addEventListener("mousedown", handleMouseDown);
     return () => document.removeEventListener("mousedown", handleMouseDown);
-  }, [activeCategory]);
+  }, [activeCategory, onPreview]);
 
   const activeData = promptCategories.find((c) => c.id === activeCategory);
 
@@ -86,9 +89,11 @@ export function PromptCategories({
           return (
             <div key={category.id} className="flex items-center">
               <button
-                onClick={() =>
-                  setActiveCategory(isActive ? null : category.id)
-                }
+                onClick={() => {
+                  const next = isActive ? null : category.id;
+                  setActiveCategory(next);
+                  if (!next) onPreview?.("");
+                }}
                 className={`category-tab flex items-center gap-1.5 rounded-lg px-3 h-8 text-sm ${
                   isActive
                     ? "bg-surface text-text-primary shadow-[0_0_0_0.5px_rgba(31,30,29,0.25)]"
@@ -133,6 +138,7 @@ export function PromptCategories({
             existingGoals={activeData.id === "goals" ? existingGoals : undefined}
             onGoalNavigate={(goalId) => {
               setActiveCategory(null);
+              onPreview?.("");
               router.push(`/chat/${goalId}`);
             }}
             onSelect={(prompt) => {
@@ -145,7 +151,9 @@ export function PromptCategories({
                 onSelectPrompt(prompt.title, activeData.id);
               }
               setActiveCategory(null);
+              onPreview?.("");
             }}
+            onPreview={activeData.id === "goals" ? onPreview : undefined}
           />
         </div>
       )}
