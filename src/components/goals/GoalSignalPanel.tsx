@@ -32,7 +32,7 @@ export function GoalSignalPanel({
 
   return (
     <div className="border-b border-border bg-accent/5 px-4 py-3">
-      <div className="mx-auto max-w-2xl flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-3">
         {/* Goal title */}
         <div className="flex items-center gap-1.5">
           <Target size={14} className="shrink-0 text-accent" />
@@ -129,7 +129,7 @@ export function GoalSignalPanel({
 
       {/* Expanded signal list */}
       {signalsExpanded && signals.length > 0 && (
-        <div className="mx-auto max-w-2xl mt-2 flex flex-col gap-1.5">
+        <div className="mt-2 flex flex-col gap-1.5">
           {signals.map((signal) => (
             <div
               key={signal.id}
