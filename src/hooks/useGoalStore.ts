@@ -10,7 +10,14 @@ import {
 } from "@/hooks/useChatHistory";
 import { saveSignal, deleteSignalsForGoal } from "@/hooks/useSignalStore";
 import { deleteDocumentsForChat } from "@/hooks/useDocumentStore";
-import type { ChatRecord, GoalMeta, GoalStatus } from "@/types";
+import type {
+  ChatRecord,
+  DashboardAttribute,
+  DashboardSchema,
+  DashboardValues,
+  GoalMeta,
+  GoalStatus,
+} from "@/types";
 
 const CHAT_PREFIX = "chat:";
 
@@ -101,6 +108,45 @@ export async function incrementGoalSignals(id: string): Promise<void> {
   }
 }
 
+export async function setDashboardSchema(
+  id: string,
+  schema: DashboardSchema,
+): Promise<void> {
+  const chat = await getChat(id);
+  if (chat?.goal) {
+    chat.goal.dashboardSchema = schema;
+    await set(chatKey(id), { ...chat, updatedAt: Date.now() });
+  }
+}
+
+export async function updateDashboardValues(
+  id: string,
+  newValues: DashboardValues,
+): Promise<void> {
+  const chat = await getChat(id);
+  if (chat?.goal) {
+    chat.goal.dashboardValues = {
+      ...chat.goal.dashboardValues,
+      ...newValues,
+    };
+    await set(chatKey(id), { ...chat, updatedAt: Date.now() });
+  }
+}
+
+export async function updateDashboardAttribute(
+  id: string,
+  attrId: string,
+  updates: Partial<Omit<DashboardAttribute, "id">>,
+): Promise<void> {
+  const chat = await getChat(id);
+  if (chat?.goal?.dashboardSchema) {
+    chat.goal.dashboardSchema = chat.goal.dashboardSchema.map((attr) =>
+      attr.id === attrId ? { ...attr, ...updates } : attr,
+    );
+    await set(chatKey(id), { ...chat, updatedAt: Date.now() });
+  }
+}
+
 /**
  * Scan existing regular chats for signals relevant to a newly created goal.
  * Best-effort, non-blocking — intended to be called fire-and-forget.
@@ -111,6 +157,7 @@ export async function scanExistingChatsForSignals(
   title: string,
   description: string,
   category?: string,
+  dashboardSchema?: DashboardSchema,
 ): Promise<number> {
   try {
     const regularChats = await listRegularChats();
@@ -145,8 +192,14 @@ export async function scanExistingChatsForSignals(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          responseText: combined.slice(0, 4000),
-          goals: [{ id: goalId, title, description, category: category || "" }],
+          responseText: combined.slice(0, 2000),
+          goals: [{
+            id: goalId,
+            title,
+            description,
+            category: category || "",
+            dashboardSchema,
+          }],
         }),
       });
 
@@ -156,16 +209,30 @@ export async function scanExistingChatsForSignals(
           // Use the last message ID as source for all signals from this chat
           const sourceMessageId = batchedTexts[batchedTexts.length - 1].msgId;
           for (const sig of data.signals) {
+            const signalId = nanoid(10);
             await saveSignal({
-              id: nanoid(10),
+              id: signalId,
               goalId: sig.goalId,
               sourceChatId: chat.id,
               sourceMessageId,
               summary: sig.summary,
               category: sig.category,
               createdAt: Date.now(),
+              extractedValues: sig.extractedValues,
             });
             await incrementGoalSignals(sig.goalId);
+            // Apply extracted values to dashboard
+            if (sig.extractedValues && Object.keys(sig.extractedValues).length > 0) {
+              const dashValues: DashboardValues = {};
+              for (const [key, val] of Object.entries(sig.extractedValues)) {
+                dashValues[key] = {
+                  value: val as string | number | boolean,
+                  sourceSignalId: signalId,
+                  updatedAt: Date.now(),
+                };
+              }
+              await updateDashboardValues(sig.goalId, dashValues);
+            }
             totalSignals++;
           }
         }

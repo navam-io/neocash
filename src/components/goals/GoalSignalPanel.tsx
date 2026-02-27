@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronRight, Radio, Target, Zap } from "lucide-react";
+import { ChevronDown, ChevronRight, LayoutDashboard, Radio, Target, Zap } from "lucide-react";
 import type { GoalMeta, GoalStatus, SignalRecord } from "@/types";
 
 interface GoalSignalPanelProps {
@@ -11,6 +11,9 @@ interface GoalSignalPanelProps {
   signals: SignalRecord[];
   onStatusChange: (status: GoalStatus) => void;
   onTogglePollinate: () => void;
+  hasDashboard?: boolean;
+  dashboardOpen?: boolean;
+  onToggleDashboard?: () => void;
 }
 
 export function GoalSignalPanel({
@@ -19,6 +22,9 @@ export function GoalSignalPanel({
   signals,
   onStatusChange,
   onTogglePollinate,
+  hasDashboard,
+  dashboardOpen,
+  onToggleDashboard,
 }: GoalSignalPanelProps) {
   const router = useRouter();
   const [signalsExpanded, setSignalsExpanded] = useState(false);
@@ -92,7 +98,7 @@ export function GoalSignalPanel({
         {signals.length > 0 && (
           <button
             onClick={() => setSignalsExpanded(!signalsExpanded)}
-            className="flex items-center gap-1 text-xs text-text-tertiary hover:text-text-secondary transition-colors ml-auto"
+            className="flex items-center gap-1 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
           >
             <Zap size={12} className="text-accent" />
             <span>{signals.length} signal{signals.length !== 1 ? "s" : ""}</span>
@@ -101,6 +107,22 @@ export function GoalSignalPanel({
             ) : (
               <ChevronRight size={12} />
             )}
+          </button>
+        )}
+
+        {/* Dashboard toggle */}
+        {hasDashboard && onToggleDashboard && (
+          <button
+            onClick={onToggleDashboard}
+            className={`flex items-center gap-1 text-xs transition-colors ml-auto ${
+              dashboardOpen
+                ? "text-accent"
+                : "text-text-tertiary hover:text-text-secondary"
+            }`}
+            aria-label={dashboardOpen ? "Close dashboard" : "Open dashboard"}
+          >
+            <LayoutDashboard size={14} />
+            <span className="hidden sm:inline">Dashboard</span>
           </button>
         )}
       </div>

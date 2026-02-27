@@ -57,6 +57,20 @@ export function buildGoalSystemPrompt(
     }
   }
 
+  if (goal.dashboardSchema && goal.dashboardSchema.length > 0) {
+    prompt += `\n### Dashboard Tracking\n\n`;
+    prompt += `This goal has a dashboard tracking the following metrics:\n\n`;
+    for (const attr of goal.dashboardSchema) {
+      const val = goal.dashboardValues?.[attr.id];
+      if (val !== undefined && val.value !== undefined) {
+        prompt += `- **${attr.name}** (${attr.type}): ${val.value}\n`;
+      } else {
+        prompt += `- **${attr.name}** (${attr.type}): *not yet known*\n`;
+      }
+    }
+    prompt += `\nWhen the user provides information that matches a tracked metric, acknowledge the update. Proactively ask about unknown values when it's natural to do so — don't force it, but weave questions into your advice.\n`;
+  }
+
   prompt += `\n### Goal Thread Behavior\n\n`;
   prompt += `- Stay focused on this specific goal. Keep responses relevant to achieving it.\n`;
   prompt += `- Reference any cross-pollinated signals when they inform your advice.\n`;

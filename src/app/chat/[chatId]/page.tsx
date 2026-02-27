@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback, use } from "react";
+import { useEffect, useState, useCallback, useSyncExternalStore, use } from "react";
 import { useChat } from "@ai-sdk/react";
 import { TextStreamChatTransport } from "ai";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { GoalSignalPanel } from "@/components/goals/GoalSignalPanel";
+import { GoalDashboardPanel } from "@/components/goals/GoalDashboardPanel";
 import { nanoid } from "nanoid";
 import { getChat, saveChat } from "@/hooks/useChatHistory";
 import {
@@ -20,10 +21,21 @@ import {
   updateGoalStatus,
   toggleCrossPollination,
   incrementGoalSignals,
+  updateDashboardValues,
+  setDashboardSchema,
 } from "@/hooks/useGoalStore";
 import { saveSignal, listSignalsForGoal } from "@/hooks/useSignalStore";
 import { extractDocumentMetadata } from "@/lib/file-utils";
-import type { GoalMeta, GoalStatus, SignalRecord } from "@/types";
+import type { DashboardSchema, GoalMeta, GoalStatus, SignalRecord } from "@/types";
+
+const mobileQuery = "(max-width: 767px)";
+const subscribe = (cb: () => void) => {
+  const mql = window.matchMedia(mobileQuery);
+  mql.addEventListener("change", cb);
+  return () => mql.removeEventListener("change", cb);
+};
+const getSnapshot = () => window.matchMedia(mobileQuery).matches;
+const getServerSnapshot = () => false;
 
 export default function ChatPage({
   params,
@@ -31,7 +43,9 @@ export default function ChatPage({
   params: Promise<{ chatId: string }>;
 }) {
   const { chatId } = use(params);
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const isMobile = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const {
     selectedModel,
     researchMode,
@@ -47,6 +61,7 @@ export default function ChatPage({
   const [goalMeta, setGoalMeta] = useState<GoalMeta | null>(null);
   const [goalTitle, setGoalTitle] = useState("");
   const [signals, setSignals] = useState<SignalRecord[]>([]);
+  const [dashboardOpen, setDashboardOpen] = useState(false);
 
   // Build transport body — include goalContext when this is a goal thread
   const transportBody = goalMeta
@@ -118,6 +133,7 @@ export default function ChatPage({
                 title: g.title,
                 description: g.goal!.description,
                 category: g.goal!.category || "",
+                dashboardSchema: g.goal!.dashboardSchema,
               }));
 
               const resp = await fetch("/api/detect-signals", {
@@ -133,16 +149,30 @@ export default function ChatPage({
                 const data = await resp.json();
                 if (data.signals && data.signals.length > 0) {
                   for (const sig of data.signals) {
+                    const signalId = nanoid(10);
                     await saveSignal({
-                      id: nanoid(10),
+                      id: signalId,
                       goalId: sig.goalId,
                       sourceChatId: chatId,
                       sourceMessageId: message.id,
                       summary: sig.summary,
                       category: sig.category,
                       createdAt: Date.now(),
+                      extractedValues: sig.extractedValues,
                     });
                     await incrementGoalSignals(sig.goalId);
+                    // Apply extracted values to dashboard
+                    if (sig.extractedValues && Object.keys(sig.extractedValues).length > 0) {
+                      const dashValues: Record<string, { value: string | number | boolean; sourceSignalId: string; updatedAt: number }> = {};
+                      for (const [key, val] of Object.entries(sig.extractedValues)) {
+                        dashValues[key] = {
+                          value: val as string | number | boolean,
+                          sourceSignalId: signalId,
+                          updatedAt: Date.now(),
+                        };
+                      }
+                      await updateDashboardValues(sig.goalId, dashValues);
+                    }
                   }
                   refreshGoalList();
                 }
@@ -184,11 +214,15 @@ export default function ChatPage({
     load();
   }, [chatId, setMessages]);
 
-  // Re-fetch signals when goalListVersion changes (e.g., after retroactive scan)
+  // Re-fetch signals and GoalMeta when goalListVersion changes (e.g., after retroactive scan or dashboard value update)
+  const isGoalThread = !!goalMeta;
   useEffect(() => {
-    if (!goalMeta) return;
+    if (!isGoalThread) return;
     listSignalsForGoal(chatId).then(setSignals);
-  }, [goalListVersion, chatId, goalMeta]);
+    getChat(chatId).then((chat) => {
+      if (chat?.goal) setGoalMeta(chat.goal);
+    });
+  }, [goalListVersion, chatId, isGoalThread]);
 
   // Handle initial message from URL param (new chat flow)
   useEffect(() => {
@@ -260,6 +294,31 @@ export default function ChatPage({
     refreshGoalList();
   }, [chatId, refreshGoalList]);
 
+  const handleToggleDashboard = useCallback(() => {
+    setDashboardOpen((prev) => !prev);
+  }, []);
+
+  const handleSaveSchema = useCallback(
+    async (newSchema: DashboardSchema) => {
+      await setDashboardSchema(chatId, newSchema);
+      setGoalMeta((prev) =>
+        prev ? { ...prev, dashboardSchema: newSchema } : null,
+      );
+      refreshGoalList();
+    },
+    [chatId, refreshGoalList],
+  );
+
+  const handleSourceClick = useCallback(
+    (signalId: string) => {
+      const signal = signals.find((s) => s.id === signalId);
+      if (signal) router.push(`/chat/${signal.sourceChatId}`);
+    },
+    [signals, router],
+  );
+
+  const hasDashboard = !!(goalMeta?.dashboardSchema && goalMeta.dashboardSchema.length > 0);
+
   return (
     <div className="flex h-full flex-col">
       {goalMeta && (
@@ -269,37 +328,57 @@ export default function ChatPage({
           signals={signals}
           onStatusChange={handleStatusChange}
           onTogglePollinate={handleTogglePollinate}
+          hasDashboard={hasDashboard}
+          dashboardOpen={dashboardOpen}
+          onToggleDashboard={handleToggleDashboard}
         />
       )}
 
-      <ChatMessages messages={messages} isLoading={isLoading} />
+      <div className="flex flex-1 min-h-0">
+        {/* Chat area */}
+        <div className="flex flex-1 min-w-0 flex-col">
+          <ChatMessages messages={messages} isLoading={isLoading} />
 
-      <div className="shrink-0 px-4 pb-4">
-        <div className="mx-auto max-w-2xl">
-          <ChatInput
-            onSend={async (text, files) => {
-              if (files) {
-                for (const file of files) {
-                  if (!file.mediaType.startsWith("image/")) {
-                    await saveDocument({
-                      id: nanoid(10),
-                      filename: file.filename || "Document",
-                      mediaType: file.mediaType,
-                      chatId,
-                      metadata: "",
-                      fileSize: file.url.length,
-                      createdAt: Date.now(),
-                    });
+          <div className="shrink-0 px-4 pb-4">
+            <div className="mx-auto max-w-2xl">
+              <ChatInput
+                onSend={async (text, files) => {
+                  if (files) {
+                    for (const file of files) {
+                      if (!file.mediaType.startsWith("image/")) {
+                        await saveDocument({
+                          id: nanoid(10),
+                          filename: file.filename || "Document",
+                          mediaType: file.mediaType,
+                          chatId,
+                          metadata: "",
+                          fileSize: file.url.length,
+                          createdAt: Date.now(),
+                        });
+                      }
+                    }
+                    refreshDocumentList();
                   }
-                }
-                refreshDocumentList();
-              }
-              sendMessage({ text, files });
-            }}
-            onStop={stop}
-            isLoading={isLoading}
-          />
+                  sendMessage({ text, files });
+                }}
+                onStop={stop}
+                isLoading={isLoading}
+              />
+            </div>
+          </div>
         </div>
+
+        {/* Dashboard panel (single instance — desktop sidebar or mobile bottom sheet) */}
+        {hasDashboard && dashboardOpen && (
+          <GoalDashboardPanel
+            schema={goalMeta!.dashboardSchema!}
+            values={goalMeta!.dashboardValues || {}}
+            onClose={handleToggleDashboard}
+            onSaveSchema={handleSaveSchema}
+            onSourceClick={handleSourceClick}
+            isMobile={isMobile}
+          />
+        )}
       </div>
     </div>
   );
