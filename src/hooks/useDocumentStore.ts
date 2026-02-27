@@ -55,6 +55,14 @@ export async function updateDocumentMetadata(
   }
 }
 
+export async function clearAllDocuments(): Promise<void> {
+  const allKeys = await keys();
+  const docKeys = allKeys.filter(
+    (k) => typeof k === "string" && k.startsWith(DOC_PREFIX),
+  );
+  for (const key of docKeys) await del(key);
+}
+
 export async function deleteDocumentsForChat(
   chatId: string,
 ): Promise<void> {

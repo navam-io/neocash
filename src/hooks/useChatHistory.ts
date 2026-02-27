@@ -1,6 +1,7 @@
 "use client";
 
 import { get, set, del, keys, entries } from "idb-keyval";
+import { deleteDocumentsForChat } from "@/hooks/useDocumentStore";
 import type { ChatRecord } from "@/types";
 
 const CHAT_PREFIX = "chat:";
@@ -36,6 +37,19 @@ export async function listChats(): Promise<ChatRecord[]> {
     .sort((a, b) => b.updatedAt - a.updatedAt);
 
   return chats;
+}
+
+export async function deleteChatWithCascade(id: string): Promise<void> {
+  await deleteDocumentsForChat(id);
+  await del(chatKey(id));
+}
+
+export async function clearAllChats(): Promise<void> {
+  const allKeys = await keys();
+  const chatKeys = allKeys.filter(
+    (k) => typeof k === "string" && k.startsWith(CHAT_PREFIX),
+  );
+  for (const key of chatKeys) await del(key);
 }
 
 export async function createChat(

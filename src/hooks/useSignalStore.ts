@@ -42,6 +42,14 @@ export async function listSignalsForGoal(
   return signals.sort((a, b) => b.createdAt - a.createdAt);
 }
 
+export async function clearAllSignals(): Promise<void> {
+  const allKeys = await keys();
+  const signalKeys = allKeys.filter(
+    (k) => typeof k === "string" && k.startsWith(SIGNAL_PREFIX),
+  );
+  for (const key of signalKeys) await del(key);
+}
+
 export async function deleteSignalsForGoal(goalId: string): Promise<void> {
   const allKeys = await keys();
   const signalKeys = allKeys.filter(

@@ -111,7 +111,17 @@ UX polish, signal quality improvements, and discoverability enhancements for Goa
 
 ## Open
 
-_No open intents._
+### Data Management — [`intents/data-management.md`](intents/data-management.md)
+
+Inline delete, full reset, and sample data loading for NeoCash.
+
+- Inline delete with hover-to-reveal trash icon on Chats, Goals, and Documents
+- Two-step inline confirmation (no modal dialogs)
+- Cascade-aware deletes (goal → signals + docs, chat → docs)
+- Post-delete navigation to home if active item deleted
+- User profile menu with "Reset All Data" and "Load Sample Data" actions
+- Sample data: 3 chats, 2 goals, 3 signals, 3 documents (fictional, no PII)
+- Dynamic import for sample data module (kept out of main bundle)
 
 ---
 

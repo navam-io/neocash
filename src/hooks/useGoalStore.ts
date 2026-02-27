@@ -5,9 +5,11 @@ import { nanoid } from "nanoid";
 import {
   getChat,
   createChat,
+  deleteChat,
   listChats,
 } from "@/hooks/useChatHistory";
-import { saveSignal } from "@/hooks/useSignalStore";
+import { saveSignal, deleteSignalsForGoal } from "@/hooks/useSignalStore";
+import { deleteDocumentsForChat } from "@/hooks/useDocumentStore";
 import type { ChatRecord, GoalMeta, GoalStatus } from "@/types";
 
 const CHAT_PREFIX = "chat:";
@@ -37,6 +39,12 @@ export async function createGoal(
   };
   await set(chatKey(id), chat);
   return chat;
+}
+
+export async function deleteGoal(id: string): Promise<void> {
+  await deleteSignalsForGoal(id);
+  await deleteDocumentsForChat(id);
+  await deleteChat(id);
 }
 
 export async function listGoals(): Promise<ChatRecord[]> {
