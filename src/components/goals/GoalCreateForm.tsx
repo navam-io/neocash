@@ -6,7 +6,7 @@ import { nanoid } from "nanoid";
 import { Sparkles, Loader2 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { createGoal, setDashboardSchema, scanExistingChatsForSignals } from "@/hooks/useGoalStore";
-import { promptCategories } from "@/lib/prompts";
+import { promptCategories, resolvePromptYears } from "@/lib/prompts";
 
 interface GoalCreateFormProps {
   onClose: () => void;
@@ -91,7 +91,7 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="e.g., Prepare for Tax Season 2026"
+        placeholder={resolvePromptYears("e.g., Prepare for Tax Season {thisYear}")}
         className="w-full rounded-md bg-page-bg border border-border px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent"
         autoFocus
       />
@@ -126,9 +126,7 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
         className="w-full rounded-md bg-page-bg border border-border px-2.5 py-1.5 text-sm text-text-secondary focus:outline-none focus:ring-1 focus:ring-accent"
       >
         <option value="">Category (optional)</option>
-        {promptCategories
-          .filter((c) => c.id !== "neocash" && c.id !== "goals")
-          .map((c) => (
+        {promptCategories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
             </option>

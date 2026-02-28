@@ -24,10 +24,10 @@ export default function NewChatPage() {
     async (message: string, files?: FileUIPart[], categoryId?: string, goalTitle?: string) => {
       const id = nanoid(10);
 
-      // If this is a "goals" category prompt, create a goal thread instead
-      if (categoryId === "goals") {
+      // Any category selection creates a goal thread
+      if (categoryId) {
         const title = goalTitle || message.slice(0, 60);
-        await createGoal(id, selectedModel, title, undefined, message, "predefined");
+        await createGoal(id, selectedModel, title, categoryId, message, "predefined");
         setActiveChatId(id);
         refreshGoalList();
         refreshChatList();
@@ -35,14 +35,14 @@ export default function NewChatPage() {
         fetch("/api/generate-dashboard-schema", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, description: message, category: undefined }),
+          body: JSON.stringify({ title, description: message, category: categoryId }),
         })
           .then((r) => r.json())
           .then(async (data) => {
             const schema = data.schema?.length > 0 ? data.schema : undefined;
             if (schema) await setDashboardSchema(id, schema);
             refreshGoalList();
-            return scanExistingChatsForSignals(id, title, message, undefined, schema);
+            return scanExistingChatsForSignals(id, title, message, categoryId, schema);
           })
           .then(() => refreshGoalList())
           .catch(() => {/* best-effort */});
@@ -50,6 +50,7 @@ export default function NewChatPage() {
         return;
       }
 
+      // Free text — create regular chat
       const chat = await createChat(id, selectedModel);
       chat.title = message.slice(0, 60);
       await saveChat(chat);
@@ -77,10 +78,6 @@ export default function NewChatPage() {
     [selectedModel, setActiveChatId, refreshChatList, refreshGoalList, refreshDocumentList, pendingFiles, router],
   );
 
-  function handlePrefill(text: string) {
-    setInputValue(text);
-  }
-
   return (
     <div className="flex h-full flex-col items-center justify-center px-4">
       <div className="w-full max-w-2xl flex flex-col items-center gap-6">
@@ -97,14 +94,9 @@ export default function NewChatPage() {
         <PromptCategories
           onSelectPrompt={(prompt, categoryId, goalTitle) => {
             setPreviewText("");
-            if (categoryId === "goals") {
-              startChat(prompt, undefined, categoryId, goalTitle);
-            } else {
-              startChat(prompt);
-            }
+            startChat(prompt, undefined, categoryId, goalTitle);
           }}
           visible={categoriesVisible}
-          onPrefill={handlePrefill}
           onPreview={setPreviewText}
         />
       </div>

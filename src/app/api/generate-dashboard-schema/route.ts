@@ -9,6 +9,8 @@ export async function POST(req: Request) {
       return Response.json({ error: "Title is required" }, { status: 400 });
     }
 
+    const currentYear = new Date().getFullYear();
+
     const { text } = await generateText({
       model: anthropic("claude-sonnet-4-6"),
       system: `You generate dashboard schemas for personal wealth management goals. Given a goal title, description, and optional category, return a JSON array of 3-8 typed attributes that a user would want to track for this goal.
@@ -29,7 +31,7 @@ Choose types carefully:
 
 Examples:
 
-Goal: "Prepare for Tax Season 2026"
+Goal: "Prepare for Tax Season ${currentYear}"
 [
   {"id":"total_income","name":"Total Income","type":"currency","description":"Combined W-2 and 1099 income for the tax year"},
   {"id":"tax_withheld","name":"Tax Withheld","type":"currency","description":"Total federal and state tax already withheld"},

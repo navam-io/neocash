@@ -1,165 +1,199 @@
 import type { PromptCategory } from "@/types";
 
+/**
+ * Replace year placeholders with dynamic values at render time.
+ * Supports: {thisYear}, {lastYear}, {nextYear}
+ */
+export function resolvePromptYears(text: string): string {
+  const year = new Date().getFullYear();
+  return text
+    .replace(/\{thisYear\}/g, String(year))
+    .replace(/\{lastYear\}/g, String(year - 1))
+    .replace(/\{nextYear\}/g, String(year + 1));
+}
+
 export const promptCategories: PromptCategory[] = [
   {
     id: "tax",
-    label: "Tax Planning",
+    label: "Tax & Filing",
     icon: "receipt",
     prompts: [
       {
-        title: "What tax deductions am I likely missing as a salaried employee?",
-        text: "What tax deductions am I likely missing as a salaried employee? I want to make sure I'm taking advantage of every deduction available to me, including home office, education, health savings, and any lesser-known deductions.",
+        title: "Assess and file my taxes for {lastYear}",
+        text: "I want to set a goal to assess and file my taxes for {lastYear}. Help me gather all necessary documents (W-2s, 1099s, deductions), identify credits I qualify for, and create a filing timeline to maximize my refund or minimize what I owe.",
       },
       {
-        title: "Explain the difference between traditional and Roth IRA tax benefits",
-        text: "Explain the difference between traditional and Roth IRA tax benefits. Help me understand which one makes more sense given different income levels and retirement timelines, with concrete examples of the tax impact.",
+        title: "Review quarterly estimated tax payments for {thisYear}",
+        text: "I want to set a goal to review and plan my quarterly estimated tax payments for {thisYear}. Help me calculate what I owe each quarter, set payment deadlines, and avoid underpayment penalties.",
       },
       {
-        title: "How can I minimize capital gains tax when rebalancing my portfolio?",
-        text: "How can I minimize capital gains tax when rebalancing my portfolio? Walk me through strategies like tax-loss harvesting, holding period optimization, and using tax-advantaged accounts for rebalancing.",
+        title: "Evaluate tax-loss harvesting opportunities",
+        text: "I want to set a goal to evaluate tax-loss harvesting opportunities in my portfolio. Help me identify positions with unrealized losses, calculate potential tax savings, and plan trades that maintain my target allocation.",
       },
       {
-        title: "What are the tax implications of selling my home this year?",
-        text: "What are the tax implications of selling my home this year? Cover the capital gains exclusion rules, how to calculate my cost basis, and any strategies to reduce the tax burden from the sale.",
-      },
-      {
-        title: "Help me create a year-end tax planning checklist",
-        text: "Help me create a comprehensive year-end tax planning checklist. Include items like maximizing retirement contributions, harvesting losses, charitable giving strategies, and any last-minute moves to reduce my tax bill.",
+        title: "Optimize charitable giving and deduction strategy",
+        text: "I want to set a goal to optimize my charitable giving and deduction strategy. Help me evaluate bunching donations, donor-advised funds, and qualified charitable distributions to maximize my tax benefit.",
       },
     ],
   },
   {
     id: "investing",
-    label: "Investing",
+    label: "Investing & Markets",
     icon: "trending-up",
     prompts: [
       {
-        title: "Build me a diversified ETF portfolio for long-term growth",
-        text: "Build me a diversified ETF portfolio for long-term growth. Suggest specific asset classes, allocation percentages, and low-cost ETFs to consider. Assume a 20+ year time horizon with moderate-to-high risk tolerance.",
+        title: "Evaluate my portfolio for growth, tax savings, and risk mitigation",
+        text: "I want to set a goal to evaluate my portfolio of investments. Help me analyze my current holdings and recommend strategies for growth, tax savings, and risk mitigation across all my accounts.",
       },
       {
-        title: "Explain dollar-cost averaging and when it makes sense",
-        text: "Explain dollar-cost averaging and when it makes sense versus lump-sum investing. Use historical examples to show how each strategy performs in different market conditions.",
+        title: "Buy/sell/hold analysis based on market conditions",
+        text: "I want to set a goal to perform a buy/sell/hold analysis for a company. Based on current market conditions, industry trends, and the company's recent performance, help me build a rationale for my investment decision.",
       },
       {
-        title: "What should I look for when evaluating individual stocks?",
-        text: "What should I look for when evaluating individual stocks? Walk me through key financial metrics, qualitative factors, and red flags to watch for when doing fundamental analysis.",
+        title: "Build a diversified ETF portfolio for long-term growth",
+        text: "I want to set a goal to build a diversified ETF portfolio for long-term growth. Help me select asset classes, determine allocation percentages, and choose low-cost ETFs with a 20+ year time horizon.",
       },
       {
-        title: "How do I get started with index fund investing?",
-        text: "How do I get started with index fund investing? Explain what index funds are, their advantages over actively managed funds, and give me a step-by-step guide to building a simple index fund portfolio.",
-      },
-      {
-        title: "Compare the risk-return profiles of bonds, stocks, and REITs",
-        text: "Compare the risk-return profiles of bonds, stocks, and REITs. Include historical average returns, volatility, correlation with each other, and when each asset class tends to outperform.",
+        title: "Create a dollar-cost averaging investment plan",
+        text: "I want to set a goal to create a dollar-cost averaging investment plan. Help me determine how much to invest, set a schedule, choose target investments, and track my progress over time.",
       },
     ],
   },
   {
-    id: "portfolio",
-    label: "Portfolio",
-    icon: "pie-chart",
+    id: "retirement",
+    label: "Retirement & Savings",
+    icon: "piggy-bank",
     prompts: [
       {
-        title: "Review my asset allocation for a 30-year-old with moderate risk tolerance",
-        text: "Review my asset allocation for a 30-year-old with moderate risk tolerance. Suggest an appropriate mix of stocks, bonds, and alternatives, and explain how this should shift as I get closer to retirement.",
+        title: "Maximize 401(k) and IRA contributions for {thisYear}",
+        text: "I want to set a goal to maximize my 401(k) and IRA contributions for {thisYear}. Help me review contribution limits, employer matching, and the best strategy to fully fund my retirement accounts this year.",
       },
       {
-        title: "When should I rebalance my portfolio and how?",
-        text: "When should I rebalance my portfolio and how? Compare calendar-based vs. threshold-based rebalancing strategies, and explain the tax implications of each approach.",
+        title: "Plan retirement withdrawal strategy",
+        text: "I want to set a goal to plan my retirement withdrawal strategy. Help me determine the optimal order to withdraw from taxable, tax-deferred, and Roth accounts to minimize taxes and maximize longevity of my savings.",
       },
       {
-        title: "How much international exposure should my portfolio have?",
-        text: "How much international exposure should my portfolio have? Discuss the benefits of international diversification, home country bias, and suggest a reasonable allocation for developed and emerging markets.",
-      },
-      {
-        title: "Explain the 3-fund portfolio strategy and its benefits",
-        text: "Explain the 3-fund portfolio strategy and its benefits. Walk me through the three components, how to choose specific funds, and why this simple approach often outperforms complex portfolios.",
-      },
-      {
-        title: "What's the role of alternative investments in a balanced portfolio?",
-        text: "What's the role of alternative investments in a balanced portfolio? Cover real estate, commodities, private equity, and other alternatives — their potential benefits, risks, and appropriate allocation percentages.",
-      },
-    ],
-  },
-  {
-    id: "budgeting",
-    label: "Budgeting",
-    icon: "wallet",
-    prompts: [
-      {
-        title: "Help me create a zero-based budget for my monthly income",
-        text: "Help me create a zero-based budget for my monthly income. Explain the zero-based budgeting method and walk me through categorizing every dollar of income into specific spending, saving, and investing categories.",
-      },
-      {
-        title: "What's the 50/30/20 rule and how do I apply it?",
-        text: "What's the 50/30/20 rule and how do I apply it to my personal finances? Break down each category with specific examples, and suggest adjustments for high cost-of-living areas or aggressive savings goals.",
-      },
-      {
-        title: "How much should I have in my emergency fund?",
-        text: "How much should I have in my emergency fund? Help me determine the right amount based on my situation, where to keep it, and a realistic plan to build it up over time.",
-      },
-      {
-        title: "Strategies to reduce monthly expenses without feeling deprived",
-        text: "Strategies to reduce monthly expenses without feeling deprived. Focus on the biggest expense categories like housing, transportation, and food, with practical tips that maintain quality of life.",
-      },
-      {
-        title: "How do I prioritize debt payoff vs. investing?",
-        text: "How do I prioritize debt payoff vs. investing? Compare the debt avalanche and snowball methods, explain when it makes sense to invest while carrying debt, and help me create a balanced approach.",
-      },
-    ],
-  },
-  {
-    id: "neocash",
-    label: "NeoCash's choice",
-    icon: "sparkles",
-    prompts: [
-      {
-        title: "What's the single most impactful financial habit I can start today?",
-        text: "What's the single most impactful financial habit I can start today? I want something actionable that will compound over time and significantly improve my financial health.",
-      },
-      {
-        title: "Explain compound interest with a real example over 30 years",
-        text: "Explain compound interest with a real example over 30 years. Show me the math with different contribution amounts and interest rates so I can see how small changes lead to dramatically different outcomes.",
-      },
-      {
-        title: "How do I set up automated finances so I don't have to think about money?",
-        text: "How do I set up automated finances so I don't have to think about money? Walk me through automating bill payments, savings transfers, investment contributions, and how to structure accounts for this system.",
-      },
-      {
-        title: "What financial milestones should I hit by age 30, 40, and 50?",
-        text: "What financial milestones should I hit by age 30, 40, and 50? Include net worth targets, retirement savings benchmarks, and lifestyle milestones that indicate strong financial health at each stage.",
-      },
-      {
-        title: "Walk me through opening and funding my first brokerage account",
-        text: "Walk me through opening and funding my first brokerage account. Cover how to choose a broker, account types, initial deposit, selecting first investments, and common mistakes to avoid as a beginner.",
-      },
-    ],
-  },
-  {
-    id: "goals",
-    label: "Goals",
-    icon: "target",
-    prompts: [
-      {
-        title: "Start a tax preparation goal for 2026",
-        text: "I want to set a goal to prepare for the 2026 tax season. Help me build a month-by-month checklist of what to gather, deadlines to track, and strategies to maximize my refund or minimize what I owe.",
-      },
-      {
-        title: "Track my portfolio rebalancing progress",
-        text: "I want to set a goal to rebalance my portfolio. Help me assess my current allocation, define a target allocation, and create an actionable plan with specific trades and a timeline.",
+        title: "Evaluate Roth conversion opportunity",
+        text: "I want to set a goal to evaluate whether a Roth conversion makes sense for me. Help me analyze my current tax bracket, future projections, and the long-term benefit of converting traditional IRA funds to Roth.",
       },
       {
         title: "Build an emergency fund plan",
         text: "I want to set a goal to build my emergency fund. Help me determine the right target amount based on my expenses, create a savings plan with monthly milestones, and suggest the best accounts to hold it in.",
       },
+    ],
+  },
+  {
+    id: "budgeting",
+    label: "Budgeting & Cash Flow",
+    icon: "wallet",
+    prompts: [
       {
-        title: "Plan my retirement savings strategy",
-        text: "I want to set a goal for my retirement savings strategy. Help me evaluate my current retirement accounts, optimize contributions across 401(k)/IRA/Roth, and project my savings growth with different contribution scenarios.",
+        title: "Create a monthly zero-based budget",
+        text: "I want to set a goal to create a zero-based budget for my monthly income. Help me categorize every dollar into spending, saving, and investing categories with clear targets for each.",
       },
       {
-        title: "Set a debt payoff goal with milestones",
-        text: "I want to set a goal to pay off my debt systematically. Help me list all debts, compare avalanche vs snowball strategies, create a payoff timeline with milestones, and find opportunities to accelerate payments.",
+        title: "Reduce expenses and optimize spending",
+        text: "I want to set a goal to reduce my monthly expenses. Help me audit my current spending, identify the biggest areas for savings, and create an action plan that maintains quality of life.",
+      },
+      {
+        title: "Automate savings and bill payments",
+        text: "I want to set a goal to automate my finances. Help me set up automatic transfers for savings, bill payments, and investment contributions so my money works without constant attention.",
+      },
+      {
+        title: "Track and grow net worth",
+        text: "I want to set a goal to track and grow my net worth. Help me catalog all assets and liabilities, set a target growth rate, and create monthly checkpoints to measure progress.",
+      },
+    ],
+  },
+  {
+    id: "debt",
+    label: "Debt & Credit",
+    icon: "credit-card",
+    prompts: [
+      {
+        title: "Pay off high-interest debt with milestones",
+        text: "I want to set a goal to pay off my high-interest debt systematically. Help me list all debts, compare avalanche vs snowball strategies, create a payoff timeline with milestones, and find opportunities to accelerate payments.",
+      },
+      {
+        title: "Improve credit score strategy",
+        text: "I want to set a goal to improve my credit score. Help me understand my current score factors, create an action plan to address negative items, and set realistic milestones for improvement.",
+      },
+      {
+        title: "Evaluate mortgage refinancing options",
+        text: "I want to set a goal to evaluate mortgage refinancing. Help me compare my current rate to available options, calculate break-even points, and determine if refinancing makes financial sense.",
+      },
+      {
+        title: "Create student loan repayment plan",
+        text: "I want to set a goal to create a student loan repayment plan. Help me compare repayment options (standard, income-driven, refinancing), evaluate forgiveness programs, and build a timeline to become debt-free.",
+      },
+    ],
+  },
+  {
+    id: "life-events",
+    label: "Life Events",
+    icon: "heart-handshake",
+    prompts: [
+      {
+        title: "Plan finances for buying a home",
+        text: "I want to set a goal to prepare financially for buying a home. Help me determine how much I can afford, build a down payment savings plan, understand closing costs, and get mortgage-ready.",
+      },
+      {
+        title: "Prepare financially for a new baby",
+        text: "I want to set a goal to prepare financially for a new baby. Help me estimate costs for the first year, adjust my budget, review insurance needs, and start planning for education savings.",
+      },
+      {
+        title: "Navigate a job change or career transition",
+        text: "I want to set a goal to navigate a job change financially. Help me evaluate compensation packages, manage benefits transitions, plan for any income gaps, and optimize my financial position during the switch.",
+      },
+      {
+        title: "Plan finances for a wedding",
+        text: "I want to set a goal to plan finances for a wedding. Help me set a realistic budget, create a savings timeline, prioritize spending categories, and avoid common financial pitfalls.",
+      },
+    ],
+  },
+  {
+    id: "estate",
+    label: "Estate & Insurance",
+    icon: "shield",
+    prompts: [
+      {
+        title: "Create or update my estate plan",
+        text: "I want to set a goal to create or update my estate plan. Help me understand what documents I need (will, trust, POA, healthcare directive), identify beneficiary updates, and create a checklist to get everything in order.",
+      },
+      {
+        title: "Review life and disability insurance coverage",
+        text: "I want to set a goal to review my insurance coverage. Help me evaluate whether my life and disability insurance are adequate for my situation, compare policy types, and identify any gaps in coverage.",
+      },
+      {
+        title: "Set up a college savings (529) plan",
+        text: "I want to set a goal to set up a 529 college savings plan. Help me choose the right state plan, set contribution targets, select an investment strategy, and understand the tax benefits.",
+      },
+      {
+        title: "Plan wealth transfer to heirs",
+        text: "I want to set a goal to plan wealth transfer to my heirs. Help me understand gift tax exclusions, trust options, and strategies to pass on assets efficiently while minimizing estate taxes.",
+      },
+    ],
+  },
+  {
+    id: "business",
+    label: "Business & Side Income",
+    icon: "briefcase",
+    prompts: [
+      {
+        title: "Start and fund a side business",
+        text: "I want to set a goal to start a side business. Help me evaluate funding options, set up proper business structure, plan initial expenses, and create revenue milestones.",
+      },
+      {
+        title: "Optimize self-employment taxes for {thisYear}",
+        text: "I want to set a goal to optimize my self-employment taxes for {thisYear}. Help me identify deductible expenses, plan quarterly payments, and evaluate business structures that could reduce my tax burden.",
+      },
+      {
+        title: "Evaluate business retirement plans (SEP/SIMPLE/Solo 401k)",
+        text: "I want to set a goal to choose the right business retirement plan. Help me compare SEP IRA, SIMPLE IRA, and Solo 401(k) options based on my income, contribution limits, and administrative requirements.",
+      },
+      {
+        title: "Build passive income streams",
+        text: "I want to set a goal to build passive income streams. Help me evaluate options like dividend investing, rental income, and digital products, then create a plan with income targets and timelines.",
       },
     ],
   },

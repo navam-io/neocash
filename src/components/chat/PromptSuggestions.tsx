@@ -50,16 +50,17 @@ export function PromptSuggestions({
         </>
       )}
 
-      {/* Predefined prompts */}
+      {/* Goal suggestions */}
       {prompts.map((prompt) => (
         <button
           key={prompt.title}
           onClick={() => onSelect(prompt)}
           onMouseEnter={() => onPreview?.(prompt.text)}
           onMouseLeave={() => onPreview?.("")}
-          className="flex w-full rounded-lg px-3 py-2.5 text-left text-sm text-text-secondary transition-colors hover:bg-surface-hover"
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-text-secondary transition-colors hover:bg-surface-hover"
         >
-          {prompt.title}
+          <Target size={14} className="shrink-0 text-accent/50" />
+          <span>{prompt.title}</span>
         </button>
       ))}
     </div>

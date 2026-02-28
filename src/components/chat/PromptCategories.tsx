@@ -4,40 +4,42 @@ import { useState, useRef, useEffect } from "react";
 import {
   Receipt,
   TrendingUp,
-  PieChart,
+  PiggyBank,
   Wallet,
-  Sparkles,
-  Target,
+  CreditCard,
+  HeartHandshake,
+  Shield,
+  Briefcase,
   Plus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { promptCategories } from "@/lib/prompts";
+import { promptCategories, resolvePromptYears } from "@/lib/prompts";
 import { PromptSuggestions } from "./PromptSuggestions";
 import { useApp } from "@/context/AppContext";
 import { listGoals } from "@/hooks/useGoalStore";
 import { GoalCreateForm } from "@/components/goals/GoalCreateForm";
-import type { ChatRecord } from "@/types";
+import type { ChatRecord, Prompt } from "@/types";
 
 const iconMap = {
   receipt: Receipt,
   "trending-up": TrendingUp,
-  "pie-chart": PieChart,
+  "piggy-bank": PiggyBank,
   wallet: Wallet,
-  sparkles: Sparkles,
-  target: Target,
+  "credit-card": CreditCard,
+  "heart-handshake": HeartHandshake,
+  shield: Shield,
+  briefcase: Briefcase,
 } as const;
 
 interface PromptCategoriesProps {
   onSelectPrompt: (prompt: string, categoryId?: string, goalTitle?: string) => void;
   visible?: boolean;
-  onPrefill?: (text: string) => void;
   onPreview?: (text: string) => void;
 }
 
 export function PromptCategories({
   onSelectPrompt,
   visible = true,
-  onPrefill,
   onPreview,
 }: PromptCategoriesProps) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -47,9 +49,13 @@ export function PromptCategories({
   const { goalListVersion } = useApp();
   const router = useRouter();
 
+  // Load existing goals for the active category
   useEffect(() => {
-    if (activeCategory === "goals") {
-      listGoals().then(setExistingGoals);
+    if (activeCategory) {
+      listGoals().then((goals) => {
+        const filtered = goals.filter((g) => g.goal?.category === activeCategory);
+        setExistingGoals(filtered);
+      });
     }
   }, [activeCategory, goalListVersion]);
 
@@ -70,6 +76,12 @@ export function PromptCategories({
 
   const activeData = promptCategories.find((c) => c.id === activeCategory);
 
+  // Resolve year placeholders in prompts for display
+  const resolvedPrompts: Prompt[] | undefined = activeData?.prompts.map((p) => ({
+    title: resolvePromptYears(p.title),
+    text: resolvePromptYears(p.text),
+  }));
+
   return (
     <div
       ref={containerRef}
@@ -80,49 +92,44 @@ export function PromptCategories({
         pointerEvents: visible ? "auto" : "none",
       }}
     >
-      {/* Category tabs */}
-      <div className="flex flex-wrap justify-center gap-2">
+      {/* Category tabs — two rows of 4 + standalone [+] button */}
+      <div className="flex flex-wrap justify-center gap-2 max-w-xl">
         {promptCategories.map((category) => {
           const Icon = iconMap[category.icon as keyof typeof iconMap];
           const isActive = activeCategory === category.id;
-          const isGoal = category.id === "goals";
 
           return (
-            <div key={category.id} className="flex items-center">
-              <button
-                onClick={() => {
-                  const next = isActive ? null : category.id;
-                  setActiveCategory(next);
-                  setShowGoalForm(false);
-                  if (!next) onPreview?.("");
-                }}
-                className={`category-tab flex items-center gap-1.5 rounded-lg px-3 h-8 text-sm ${
-                  isActive
-                    ? "bg-surface text-text-primary shadow-[0_0_0_0.5px_rgba(31,30,29,0.25)]"
-                    : isGoal
-                      ? "text-accent hover:bg-surface-hover shadow-[0_0_0_0.5px_rgba(196,112,75,0.3)]"
-                      : "text-text-secondary hover:bg-surface-hover shadow-[0_0_0_0.5px_rgba(31,30,29,0.12)]"
-                }`}
-              >
-                {Icon && <Icon size={14} />}
-                <span>{category.label}</span>
-              </button>
-              {isGoal && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowGoalForm(!showGoalForm);
-                    setActiveCategory(null);
-                  }}
-                  className="ml-0.5 flex h-8 w-6 items-center justify-center rounded-lg text-accent hover:bg-surface-hover transition-colors"
-                  aria-label="New goal"
-                >
-                  <Plus size={14} />
-                </button>
-              )}
-            </div>
+            <button
+              key={category.id}
+              onClick={() => {
+                const next = isActive ? null : category.id;
+                setActiveCategory(next);
+                setShowGoalForm(false);
+                if (!next) onPreview?.("");
+              }}
+              className={`category-tab flex items-center gap-1.5 rounded-lg px-3 h-8 text-sm ${
+                isActive
+                  ? "bg-surface text-text-primary shadow-[0_0_0_0.5px_rgba(31,30,29,0.25)]"
+                  : "text-text-secondary hover:bg-surface-hover shadow-[0_0_0_0.5px_rgba(31,30,29,0.12)]"
+              }`}
+            >
+              {Icon && <Icon size={14} />}
+              <span>{category.label}</span>
+            </button>
           );
         })}
+        {/* Standalone [+] custom goal button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowGoalForm(!showGoalForm);
+            setActiveCategory(null);
+          }}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-accent hover:bg-surface-hover transition-colors shadow-[0_0_0_0.5px_rgba(196,112,75,0.3)]"
+          aria-label="New custom goal"
+        >
+          <Plus size={14} />
+        </button>
       </div>
 
       {/* Goal create form */}
@@ -133,29 +140,22 @@ export function PromptCategories({
       )}
 
       {/* Suggestions dropdown */}
-      {activeData && (
+      {activeData && resolvedPrompts && (
         <div className="w-full max-w-lg">
           <PromptSuggestions
-            prompts={activeData.prompts}
-            existingGoals={activeData.id === "goals" ? existingGoals : undefined}
+            prompts={resolvedPrompts}
+            existingGoals={existingGoals.length > 0 ? existingGoals : undefined}
             onGoalNavigate={(goalId) => {
               setActiveCategory(null);
               onPreview?.("");
               router.push(`/chat/${goalId}`);
             }}
             onSelect={(prompt) => {
-              if (activeData.id === "goals") {
-                // Goals prompts bypass prefill — create goal thread directly
-                onSelectPrompt(prompt.text, activeData.id, prompt.title);
-              } else if (onPrefill) {
-                onPrefill(prompt.text);
-              } else {
-                onSelectPrompt(prompt.title, activeData.id);
-              }
+              onSelectPrompt(prompt.text, activeData.id, prompt.title);
               setActiveCategory(null);
               onPreview?.("");
             }}
-            onPreview={activeData.id === "goals" ? onPreview : undefined}
+            onPreview={onPreview}
           />
         </div>
       )}

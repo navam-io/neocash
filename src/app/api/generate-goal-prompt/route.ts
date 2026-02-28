@@ -9,6 +9,8 @@ export async function POST(req: Request) {
       return Response.json({ error: "Title is required" }, { status: 400 });
     }
 
+    const currentYear = new Date().getFullYear();
+
     const { text } = await generateText({
       model: anthropic("claude-haiku-4-5-20251001"),
       system: `You generate structured, detailed prompts for personal wealth management goals. Given a short goal title, create a rich prompt (2-4 sentences) that:
@@ -17,8 +19,8 @@ export async function POST(req: Request) {
 3. Mentions concrete areas to explore
 4. Matches the style of these examples:
 
-Title: "Start a tax preparation goal for 2026"
-Prompt: "I want to set a goal to prepare for the 2026 tax season. Help me build a month-by-month checklist of what to gather, deadlines to track, and strategies to maximize my refund or minimize what I owe."
+Title: "Start a tax preparation goal for ${currentYear}"
+Prompt: "I want to set a goal to prepare for the ${currentYear} tax season. Help me build a month-by-month checklist of what to gather, deadlines to track, and strategies to maximize my refund or minimize what I owe."
 
 Title: "Build an emergency fund plan"
 Prompt: "I want to set a goal to build my emergency fund. Help me determine the right target amount based on my expenses, create a savings plan with monthly milestones, and suggest the best accounts to hold it in."
