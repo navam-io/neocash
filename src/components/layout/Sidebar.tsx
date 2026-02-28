@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Search } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { ChatList } from "./ChatList";
 import { DocumentList } from "./DocumentList";
 import { GoalList } from "./GoalList";
+import { MemoryList } from "./MemoryList";
+import { MemoryEditor } from "../memory/MemoryEditor";
 import { UserProfile } from "./UserProfile";
 import { SidebarToggle } from "./SidebarToggle";
 import { APP_NAME } from "@/lib/constants";
@@ -14,6 +16,7 @@ import { APP_NAME } from "@/lib/constants";
 export function Sidebar() {
   const { sidebarOpen, setSidebarOpen } = useApp();
   const router = useRouter();
+  const [memoryEditorOpen, setMemoryEditorOpen] = useState(false);
 
   // Responsive: collapse on small screens
   useEffect(() => {
@@ -87,6 +90,10 @@ export function Sidebar() {
             {/* Divider */}
             <div className="mx-3 border-t border-border" />
 
+            {/* Memory */}
+            <MemoryList onOpenEditor={() => setMemoryEditorOpen(true)} />
+            <div className="mx-3 border-t border-border" />
+
             {/* Documents */}
             <DocumentList />
             <div className="mx-3 border-t border-border" />
@@ -118,6 +125,10 @@ export function Sidebar() {
           </div>
         )}
       </aside>
+
+      {memoryEditorOpen && (
+        <MemoryEditor onClose={() => setMemoryEditorOpen(false)} />
+      )}
     </>
   );
 }

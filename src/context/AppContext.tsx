@@ -29,6 +29,8 @@ interface AppContextType {
   refreshDocumentList: () => void;
   goalListVersion: number;
   refreshGoalList: () => void;
+  memoryListVersion: number;
+  refreshMemoryList: () => void;
   pendingFiles: React.RefObject<FileUIPart[]>;
 }
 
@@ -43,6 +45,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [chatListVersion, setChatListVersion] = useState(0);
   const [documentListVersion, setDocumentListVersion] = useState(0);
   const [goalListVersion, setGoalListVersion] = useState(0);
+  const [memoryListVersion, setMemoryListVersion] = useState(0);
   const pendingFiles = useRef<FileUIPart[]>([]);
 
   const toggleSidebar = useCallback(
@@ -59,6 +62,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const refreshGoalList = useCallback(
     () => setGoalListVersion((v) => v + 1),
+    [],
+  );
+  const refreshMemoryList = useCallback(
+    () => setMemoryListVersion((v) => v + 1),
     [],
   );
 
@@ -82,6 +89,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshDocumentList,
         goalListVersion,
         refreshGoalList,
+        memoryListVersion,
+        refreshMemoryList,
         pendingFiles,
       }}
     >

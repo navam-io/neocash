@@ -116,3 +116,35 @@ export interface DocumentRecord {
   fileSize: number;     // bytes
   createdAt: number;    // timestamp
 }
+
+// ─── Long-Term Memory Types ─────────────────────
+export type MemoryType = "fact" | "decision";
+
+export type MemoryCategory =
+  | "income"
+  | "tax"
+  | "accounts"
+  | "debt"
+  | "family"
+  | "employment"
+  | "property"
+  | "goals"
+  | "general";
+
+export interface MemoryRecord {
+  id: string;                    // nanoid(10)
+  type: MemoryType;
+  key: string;                   // snake_case dedup anchor: "annual_income", "filing_status"
+  value: string;                 // human-readable: "$180,000", "Married Filing Jointly"
+  category: MemoryCategory;
+  confidence: number;            // 0.0-1.0
+  source: {
+    chatId: string;
+    messageId: string;
+    extractedAt: number;
+  };
+  context?: string;              // decisions only: brief rationale
+  keywords?: string[];           // decisions only: for selective injection
+  createdAt: number;
+  updatedAt: number;
+}

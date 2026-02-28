@@ -28,8 +28,10 @@ import {
 import { listSignalsForGoal } from "@/hooks/useSignalStore";
 import { extractDocumentMetadata } from "@/lib/file-utils";
 import { processDetectedSignals } from "@/lib/signal-processing";
+import { processExtractedMemories } from "@/lib/memory-processing";
 import { prepareTextForSignalDetection } from "@/lib/signal-text";
-import type { DashboardSchema, GoalMeta, GoalStatus, SignalRecord } from "@/types";
+import { listAllMemories } from "@/hooks/useMemoryStore";
+import type { DashboardSchema, GoalMeta, GoalStatus, MemoryRecord, SignalRecord } from "@/types";
 
 const mobileQuery = "(max-width: 767px)";
 const subscribe = (cb: () => void) => {
@@ -58,6 +60,8 @@ export default function ChatPage({
     refreshDocumentList,
     refreshGoalList,
     goalListVersion,
+    memoryListVersion,
+    refreshMemoryList,
     pendingFiles,
   } = useApp();
   const [initialLoaded, setInitialLoaded] = useState(false);
@@ -66,16 +70,16 @@ export default function ChatPage({
   const [signals, setSignals] = useState<SignalRecord[]>([]);
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [chatError, setChatError] = useState<{ message: string; code?: string } | null>(null);
+  const [memories, setMemories] = useState<MemoryRecord[]>([]);
 
   // Build transport body — include goalContext when this is a goal thread
+  const baseBody = { model: selectedModel, researchMode, webSearch, memories };
   const transportBody = goalMeta
     ? {
-        model: selectedModel,
-        researchMode,
-        webSearch,
+        ...baseBody,
         goalContext: { title: goalTitle, goal: goalMeta, signals },
       }
-    : { model: selectedModel, researchMode, webSearch };
+    : baseBody;
 
   const { messages, sendMessage, stop, setMessages, status } = useChat({
     id: chatId,
@@ -213,6 +217,49 @@ export default function ChatPage({
       } catch {
         // Non-critical — signal detection is best-effort
       }
+
+      // Memory extraction: auto-extract profile facts and decisions
+      try {
+        const memResponseText =
+          message.parts
+            ?.filter(
+              (p): p is { type: "text"; text: string } => p.type === "text",
+            )
+            .map((p) => p.text)
+            .join("") || "";
+
+        if (memResponseText.length > 100) {
+          const existingSummary = memories.map((m) => ({
+            key: m.key,
+            value: m.value,
+            type: m.type,
+            category: m.category,
+          }));
+
+          const resp = await fetch("/api/extract-memories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              responseText: memResponseText,
+              existingMemories: existingSummary,
+            }),
+          });
+
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.memories?.length > 0) {
+              await processExtractedMemories(
+                data.memories,
+                chatId,
+                message.id,
+                refreshMemoryList,
+              );
+            }
+          }
+        }
+      } catch {
+        // Non-critical — memory extraction is best-effort
+      }
     },
   });
 
@@ -224,9 +271,16 @@ export default function ChatPage({
     return () => setActiveChatId(null);
   }, [chatId, setActiveChatId]);
 
+  // Load memories from IndexedDB (refresh on memoryListVersion changes)
+  useEffect(() => {
+    listAllMemories().then(setMemories);
+  }, [memoryListVersion]);
+
   // Load existing messages and goal context from IndexedDB
   useEffect(() => {
     async function load() {
+      const mems = await listAllMemories();
+      setMemories(mems);
       const chat = await getChat(chatId);
       if (chat) {
         if (chat.messages.length > 0) {

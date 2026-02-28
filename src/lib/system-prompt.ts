@@ -1,4 +1,4 @@
-import type { GoalMeta, SignalRecord } from "@/types";
+import type { GoalMeta, MemoryRecord, SignalRecord } from "@/types";
 
 export const SYSTEM_PROMPT = `You are NeoCash, a knowledgeable and thoughtful personal wealth management assistant. You help users with:
 
@@ -82,4 +82,132 @@ export function buildGoalSystemPrompt(
   prompt += `- Keep responses focused — answer the current question, update relevant metrics, and suggest one concrete next step. Let the user drive deeper exploration.\n`;
 
   return prompt;
+}
+
+// ─── Memory Context Builder ─────────────────────
+
+const CATEGORY_ORDER: MemoryRecord["category"][] = [
+  "income",
+  "employment",
+  "tax",
+  "accounts",
+  "debt",
+  "property",
+  "family",
+  "goals",
+  "general",
+];
+
+const CATEGORY_LABELS: Record<string, string> = {
+  income: "Income",
+  employment: "Employment",
+  tax: "Tax",
+  accounts: "Accounts",
+  debt: "Debt",
+  property: "Property",
+  family: "Family",
+  goals: "Goals",
+  general: "General",
+};
+
+/**
+ * Tokenize text into lowercase words for keyword matching.
+ */
+function tokenize(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .split(/[\s,.\-_:;!?()[\]{}'"\/]+/)
+      .filter((w) => w.length > 2),
+  );
+}
+
+/**
+ * Score a decision's keyword relevance against user message tokens.
+ */
+function scoreDecisionRelevance(
+  decision: MemoryRecord,
+  messageTokens: Set<string>,
+): number {
+  if (!decision.keywords || decision.keywords.length === 0) return 0;
+  let score = 0;
+  for (const kw of decision.keywords) {
+    const kwTokens = tokenize(kw);
+    for (const t of kwTokens) {
+      if (messageTokens.has(t)) score++;
+    }
+  }
+  return score;
+}
+
+/**
+ * Build memory context string for the system prompt.
+ *
+ * Facts are always included (~200 tokens), grouped by category.
+ * Decisions are keyword-matched against the user message, top 5 included.
+ * Returns empty string if no memories exist.
+ */
+export function buildMemoryContext(
+  memories: MemoryRecord[],
+  userMessage?: string,
+): string {
+  if (memories.length === 0) return "";
+
+  const facts = memories.filter((m) => m.type === "fact");
+  const decisions = memories.filter((m) => m.type === "decision");
+
+  let context = "\n\n## User Profile (from previous conversations)\n\n";
+  let hasContent = false;
+
+  // Facts: always included, grouped by category
+  if (facts.length > 0) {
+    const grouped = new Map<string, MemoryRecord[]>();
+    for (const f of facts) {
+      const list = grouped.get(f.category) || [];
+      list.push(f);
+      grouped.set(f.category, list);
+    }
+
+    for (const cat of CATEGORY_ORDER) {
+      const items = grouped.get(cat);
+      if (!items) continue;
+      context += `**${CATEGORY_LABELS[cat] || cat}:** `;
+      context += items.map((f) => `${f.value}`).join(" | ");
+      context += "\n";
+    }
+    hasContent = true;
+  }
+
+  // Decisions: keyword-matched against user message, top 5
+  if (decisions.length > 0) {
+    let matched: MemoryRecord[];
+
+    if (userMessage) {
+      const messageTokens = tokenize(userMessage);
+      const scored = decisions
+        .map((d) => ({ mem: d, score: scoreDecisionRelevance(d, messageTokens) }))
+        .filter((d) => d.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5);
+      matched = scored.map((d) => d.mem);
+    } else {
+      // No message to match against — include most recent 5
+      matched = decisions.slice(0, 5);
+    }
+
+    if (matched.length > 0) {
+      context += "\n**Key Decisions:**\n";
+      for (const d of matched) {
+        context += `- ${d.value}`;
+        if (d.context) context += ` (${d.context})`;
+        context += "\n";
+      }
+      hasContent = true;
+    }
+  }
+
+  if (!hasContent) return "";
+
+  context += "\nUse this profile context naturally. Do not repeat it back unless asked.";
+  return context;
 }

@@ -7,10 +7,11 @@ import { useApp } from "@/context/AppContext";
 import { clearAllChats } from "@/hooks/useChatHistory";
 import { clearAllSignals } from "@/hooks/useSignalStore";
 import { clearAllDocuments } from "@/hooks/useDocumentStore";
+import { clearAllMemories } from "@/hooks/useMemoryStore";
 
 export function UserProfile() {
   const router = useRouter();
-  const { refreshChatList, refreshGoalList, refreshDocumentList } = useApp();
+  const { refreshChatList, refreshGoalList, refreshDocumentList, refreshMemoryList } = useApp();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<
     "reset" | "sample" | null
@@ -34,9 +35,11 @@ export function UserProfile() {
     await clearAllChats();
     await clearAllSignals();
     await clearAllDocuments();
+    await clearAllMemories();
     refreshChatList();
     refreshGoalList();
     refreshDocumentList();
+    refreshMemoryList();
     setMenuOpen(false);
     setConfirmAction(null);
     router.push("/");
@@ -48,10 +51,12 @@ export function UserProfile() {
     await clearAllChats();
     await clearAllSignals();
     await clearAllDocuments();
+    await clearAllMemories();
     await loadSampleData();
     refreshChatList();
     refreshGoalList();
     refreshDocumentList();
+    refreshMemoryList();
     setMenuOpen(false);
     setConfirmAction(null);
     router.push("/");

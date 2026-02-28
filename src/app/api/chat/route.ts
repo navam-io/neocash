@@ -1,6 +1,6 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { streamText, convertToModelMessages } from "ai";
-import { SYSTEM_PROMPT, buildGoalSystemPrompt } from "@/lib/system-prompt";
+import { SYSTEM_PROMPT, buildGoalSystemPrompt, buildMemoryContext } from "@/lib/system-prompt";
 import { prepareMessagesForAPI } from "@/lib/message-windowing";
 
 export const maxDuration = 60;
@@ -19,7 +19,7 @@ function isContextOverflowError(error: unknown): boolean {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { messages, model, researchMode, webSearch, goalContext } = body;
+    const { messages, model, researchMode, webSearch, goalContext, memories } = body;
 
     // Window messages to stay within context limits
     const { messages: windowedMessages, trimmed } = await prepareMessagesForAPI(messages);
@@ -28,13 +28,21 @@ export async function POST(req: Request) {
       console.log("[chat] Message windowing applied — older document content stripped");
     }
 
-    const systemPrompt = goalContext
+    let systemPrompt = goalContext
       ? buildGoalSystemPrompt(
           goalContext.title,
           goalContext.goal,
           goalContext.signals,
         )
       : SYSTEM_PROMPT;
+
+    // Inject long-term memory context
+    if (memories && memories.length > 0) {
+      // Extract latest user message for keyword-matched decision injection
+      const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === "user");
+      const userText = lastUserMsg?.content || lastUserMsg?.parts?.filter((p: { type: string }) => p.type === "text").map((p: { text: string }) => p.text).join("") || "";
+      systemPrompt += buildMemoryContext(memories, userText);
+    }
 
     const result = streamText({
       model: anthropic(model || "claude-sonnet-4-6"),
