@@ -158,9 +158,12 @@ export async function addActionItems(
   const chat = await getChat(goalId);
   if (!chat?.goal) return;
   const existing = chat.goal.actionItems || [];
+  const activeCount = existing.filter((a) => !a.completed).length;
+  if (activeCount >= 15) return; // Hard cap: max 15 non-completed action items
   const existingTexts = new Set(existing.map((a) => a.text.toLowerCase()));
   const newItems: ActionItem[] = items
     .filter((item) => !existingTexts.has(item.text.toLowerCase()))
+    .slice(0, 15 - activeCount) // Only add up to the cap
     .map((item) => ({
       id: nanoid(10),
       text: item.text,
@@ -193,9 +196,12 @@ export async function addInsights(
   const chat = await getChat(goalId);
   if (!chat?.goal) return;
   const existing = chat.goal.insights || [];
+  const activeCount = existing.filter((i) => !i.dismissedAt).length;
+  if (activeCount >= 10) return; // Hard cap: max 10 non-dismissed insights
   const existingTexts = new Set(existing.map((i) => i.text.toLowerCase()));
   const newItems: Insight[] = items
     .filter((item) => !existingTexts.has(item.text.toLowerCase()))
+    .slice(0, 10 - activeCount) // Only add up to the cap
     .map((item) => ({
       id: nanoid(10),
       text: item.text,

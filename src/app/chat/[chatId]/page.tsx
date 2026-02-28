@@ -28,6 +28,7 @@ import {
 import { listSignalsForGoal } from "@/hooks/useSignalStore";
 import { extractDocumentMetadata } from "@/lib/file-utils";
 import { processDetectedSignals } from "@/lib/signal-processing";
+import { prepareTextForSignalDetection } from "@/lib/signal-text";
 import type { DashboardSchema, GoalMeta, GoalStatus, SignalRecord } from "@/types";
 
 const mobileQuery = "(max-width: 767px)";
@@ -139,19 +140,29 @@ export default function ChatPage({
             .map((p) => p.text)
             .join("") || "";
 
-        if (responseText.length > 50) {
-          let goalSummaries: { id: string; title: string; description: string; category: string; dashboardSchema?: DashboardSchema }[] = [];
+        if (responseText.length > 200) {
+          let goalSummaries: { id: string; title: string; description: string; category: string; dashboardSchema?: DashboardSchema; existingActionItems?: string[]; existingInsights?: string[] }[] = [];
 
           if (goalMeta) {
             // Self-detection: goal thread analyzes its own messages
             if (goalMeta.status === "active" && goalMeta.dashboardSchema?.length) {
               const chat = await getChat(chatId);
+              const activeActions = (goalMeta.actionItems || [])
+                .filter((a) => !a.completed)
+                .slice(0, 10)
+                .map((a) => a.text);
+              const activeInsights = (goalMeta.insights || [])
+                .filter((i) => !i.dismissedAt)
+                .slice(0, 10)
+                .map((i) => i.text);
               goalSummaries = [{
                 id: chatId,
                 title: chat?.title || goalTitle,
                 description: goalMeta.description,
                 category: goalMeta.category || "",
                 dashboardSchema: goalMeta.dashboardSchema,
+                existingActionItems: activeActions.length > 0 ? activeActions : undefined,
+                existingInsights: activeInsights.length > 0 ? activeInsights : undefined,
               }];
             }
           } else {
@@ -160,13 +171,25 @@ export default function ChatPage({
             const pollinateGoals = activeGoals.filter(
               (g) => g.goal?.status === "active" && g.goal?.crossPollinate,
             );
-            goalSummaries = pollinateGoals.map((g) => ({
-              id: g.id,
-              title: g.title,
-              description: g.goal!.description,
-              category: g.goal!.category || "",
-              dashboardSchema: g.goal!.dashboardSchema,
-            }));
+            goalSummaries = pollinateGoals.map((g) => {
+              const activeActions = (g.goal!.actionItems || [])
+                .filter((a) => !a.completed)
+                .slice(0, 10)
+                .map((a) => a.text);
+              const activeInsights = (g.goal!.insights || [])
+                .filter((i) => !i.dismissedAt)
+                .slice(0, 10)
+                .map((i) => i.text);
+              return {
+                id: g.id,
+                title: g.title,
+                description: g.goal!.description,
+                category: g.goal!.category || "",
+                dashboardSchema: g.goal!.dashboardSchema,
+                existingActionItems: activeActions.length > 0 ? activeActions : undefined,
+                existingInsights: activeInsights.length > 0 ? activeInsights : undefined,
+              };
+            });
           }
 
           if (goalSummaries.length > 0) {
@@ -174,7 +197,7 @@ export default function ChatPage({
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                responseText: responseText.slice(0, 6000),
+                responseText: prepareTextForSignalDetection(responseText),
                 goals: goalSummaries,
               }),
             });
