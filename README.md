@@ -36,15 +36,29 @@ Choose from eight wealth categories — tax, investing, retirement, budgeting, d
 
 ## Set goals. Let the AI connect the dots.
 
+### Create goals from any starting point
+
 <p align="center">
-  <img src="docs/screenshots/goal-dashboard.png" width="800" alt="Goal thread with dashboard metrics" />
+  <img src="docs/screenshots/goals.png" width="800" alt="Custom goal creation form" />
 </p>
 
-Create financial goals and NeoCash monitors your other conversations for relevant signals. Discussing tax-loss harvesting in one chat? The AI detects that the savings could fund your Roth IRA goal in another. Signals flow between conversations automatically — with dashboard metrics, action items, and insights that populate as you talk.
+Pick from eight wealth categories or create a custom goal. Enter a title and let the AI generate a detailed prompt — or write your own. Each goal becomes a dedicated thread that monitors your other conversations for relevant signals.
+
+### Signals flow between conversations
 
 <p align="center">
   <img src="docs/screenshots/signals.png" width="800" alt="Cross-pollinated signals between conversations" />
 </p>
+
+Discussing tax-loss harvesting in one chat? The AI detects that the savings could fund your emergency fund goal in another. Signals are categorized, summarized, and linked back to their source conversation — cross-pollination happens automatically in the background.
+
+### Metrics that populate as you talk
+
+<p align="center">
+  <img src="docs/screenshots/goal-dashboard.png" width="800" alt="Goal thread with dashboard metrics" />
+</p>
+
+Open the Dashboard panel on any goal to see current balance, target progress, action items with checkboxes, and color-coded insights. Everything populates from your conversations — no manual data entry required.
 
 ---
 
