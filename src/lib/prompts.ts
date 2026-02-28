@@ -198,3 +198,5 @@ export const promptCategories: PromptCategory[] = [
     ],
   },
 ];
+
+export const categoryIds = promptCategories.map((c) => c.id);

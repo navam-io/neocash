@@ -1,5 +1,6 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
+import { categoryIds, promptCategories } from "@/lib/prompts";
 
 export async function POST(req: Request) {
   try {
@@ -10,6 +11,9 @@ export async function POST(req: Request) {
     }
 
     const currentYear = new Date().getFullYear();
+    const categoryList = promptCategories
+      .map((c) => `${c.id} (${c.label})`)
+      .join(", ");
 
     const { text } = await generateText({
       model: anthropic("claude-haiku-4-5-20251001"),
@@ -25,11 +29,36 @@ Prompt: "I want to set a goal to prepare for the ${currentYear} tax season. Help
 Title: "Build an emergency fund plan"
 Prompt: "I want to set a goal to build my emergency fund. Help me determine the right target amount based on my expenses, create a savings plan with monthly milestones, and suggest the best accounts to hold it in."
 
-Return ONLY the prompt text, no quotes or explanation.`,
+Return a JSON object with exactly these fields:
+- "prompt": the generated prompt text (no quotes or explanation)
+- "suggestedCategory": the single best-fitting category ID from: ${categoryList}
+
+Return ONLY valid JSON, no markdown fences or extra text.`,
       prompt: `Title: "${title}"${category ? `\nCategory: ${category}` : ""}`,
     });
 
-    return Response.json({ prompt: text.trim() });
+    // Strip markdown fences if present (Haiku often wraps JSON in ```json ... ```)
+    const cleaned = text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+
+    // Try JSON parse first
+    try {
+      const parsed = JSON.parse(cleaned);
+      const result: { prompt: string; suggestedCategory?: string } = {
+        prompt: parsed.prompt,
+      };
+      // Only suggest category when caller didn't already provide one
+      if (
+        !category &&
+        parsed.suggestedCategory &&
+        categoryIds.includes(parsed.suggestedCategory)
+      ) {
+        result.suggestedCategory = parsed.suggestedCategory;
+      }
+      return Response.json(result);
+    } catch {
+      // Fallback: treat entire response as prompt text (backward compatible)
+      return Response.json({ prompt: cleaned });
+    }
   } catch (error) {
     console.error("Goal prompt generation error:", error);
     return Response.json(

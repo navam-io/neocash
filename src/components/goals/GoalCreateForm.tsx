@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { nanoid } from "nanoid";
 import { Sparkles, Loader2 } from "lucide-react";
@@ -23,6 +23,15 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [generateError, setGenerateError] = useState(false);
 
+  // Auto-suggest state
+  const [categorySuggested, setCategorySuggested] = useState(false);
+  const [categoryManuallySet, setCategoryManuallySet] = useState(false);
+  const [suggestingCategory, setSuggestingCategory] = useState(false);
+  const [validationAttempted, setValidationAttempted] = useState(false);
+
+  // Abort controller for suggest-category calls
+  const suggestAbortRef = useRef<AbortController | null>(null);
+
   async function handleGenerate() {
     if (!title.trim()) return;
     setGenerating(true);
@@ -36,6 +45,11 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
       if (resp.ok) {
         const data = await resp.json();
         setDescription(data.prompt);
+        // Auto-fill category if API suggested one and user hasn't manually picked
+        if (data.suggestedCategory && !categoryManuallySet) {
+          setCategory(data.suggestedCategory);
+          setCategorySuggested(true);
+        }
       } else {
         setGenerateError(true);
       }
@@ -46,14 +60,58 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
     }
   }
 
+  async function handleDescriptionBlur() {
+    if (!title.trim() || !description.trim() || categoryManuallySet || category) return;
+
+    // Cancel any in-flight suggest call
+    suggestAbortRef.current?.abort();
+    const controller = new AbortController();
+    suggestAbortRef.current = controller;
+
+    setSuggestingCategory(true);
+    try {
+      const resp = await fetch("/api/suggest-category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: title.trim(), description: description.trim() }),
+        signal: controller.signal,
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        // Only auto-fill if user still hasn't manually picked
+        if (data.category && !categoryManuallySet) {
+          setCategory(data.category);
+          setCategorySuggested(true);
+        }
+      }
+    } catch {
+      // Silently ignore — category suggestion is best-effort
+    } finally {
+      setSuggestingCategory(false);
+    }
+  }
+
+  function handleCategoryChange(value: string) {
+    setCategory(value);
+    if (value) {
+      setCategoryManuallySet(true);
+      setCategorySuggested(false);
+    } else {
+      setCategoryManuallySet(false);
+    }
+  }
+
+  const isFormValid = title.trim() && description.trim() && category;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || submitting) return;
+    setValidationAttempted(true);
+    if (!isFormValid || submitting) return;
     setSubmitting(true);
     try {
       const id = nanoid(10);
       const trimmedTitle = title.trim();
-      const goalDescription = description.trim() || trimmedTitle;
+      const goalDescription = description.trim();
       await createGoal(id, selectedModel, trimmedTitle, category || undefined, goalDescription, "custom");
       setActiveChatId(id);
       refreshGoalList();
@@ -74,10 +132,7 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
         })
         .then(() => refreshGoalList())
         .catch(() => {/* best-effort */});
-      // Use the description as kickoff message if available, otherwise generic
-      const kickoff = goalDescription !== trimmedTitle
-        ? goalDescription
-        : `Help me work on my goal: ${trimmedTitle}. What information do you need to get started, and what are the first steps?`;
+      const kickoff = goalDescription;
       router.push(`/chat/${id}?message=${encodeURIComponent(kickoff)}`);
       onClose();
     } finally {
@@ -85,29 +140,25 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
     }
   }
 
+  const showDescriptionError = validationAttempted && !description.trim();
+  const showCategoryError = validationAttempted && !category;
+
   return (
     <form onSubmit={handleSubmit} className="mx-2 rounded-lg bg-surface border border-border p-3 flex flex-col gap-2">
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder={resolvePromptYears("e.g., Prepare for Tax Season {thisYear}")}
-        className="w-full rounded-md bg-page-bg border border-border px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent"
-        autoFocus
-      />
-      <div className="relative">
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Detailed prompt (optional — or generate one)"
-          rows={3}
-          className="w-full rounded-md bg-page-bg border border-border px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent resize-none"
+      <div className="flex gap-1.5">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder={resolvePromptYears("e.g., Prepare for Tax Season {thisYear}")}
+          className="flex-1 rounded-md bg-page-bg border border-border px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent"
+          autoFocus
         />
         <button
           type="button"
           onClick={handleGenerate}
           disabled={!title.trim() || generating || submitting}
-          className="absolute right-1.5 bottom-1.5 flex items-center gap-1 rounded-md bg-accent/10 px-2 py-1 text-xs text-accent hover:bg-accent/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 rounded-md bg-accent/10 px-2.5 py-1.5 text-xs text-accent hover:bg-accent/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
         >
           {generating ? (
             <Loader2 size={12} className="animate-spin" />
@@ -117,25 +168,51 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
           Generate
         </button>
       </div>
+      <textarea
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        onBlur={handleDescriptionBlur}
+        placeholder="Describe your goal in detail (required — or click Generate)"
+        rows={3}
+        className={`w-full rounded-md bg-page-bg border px-2.5 py-1.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent resize-none ${
+          showDescriptionError ? "border-red-400" : "border-border"
+        }`}
+      />
       {generateError && (
         <p className="text-xs text-red-500 -mt-1">Generation failed — try again or write your own</p>
       )}
-      <select
-        value={category}
-        onChange={(e) => setCategory(e.target.value)}
-        className="w-full rounded-md bg-page-bg border border-border px-2.5 py-1.5 text-sm text-text-secondary focus:outline-none focus:ring-1 focus:ring-accent"
-      >
-        <option value="">Category (optional)</option>
-        {promptCategories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.label}
-            </option>
-          ))}
-      </select>
+      {showDescriptionError && (
+        <p className="text-xs text-red-500 -mt-1">Description is required — type one or click Generate</p>
+      )}
+      <div className="relative">
+        <select
+          value={category}
+          onChange={(e) => handleCategoryChange(e.target.value)}
+          className={`w-full rounded-md bg-page-bg border px-2.5 py-1.5 pr-12 text-sm focus:outline-none focus:ring-1 focus:ring-accent ${
+            showCategoryError ? "border-red-400" : "border-border"
+          } ${category ? "text-text-secondary" : "text-text-tertiary"}`}
+        >
+          <option value="">Select a category</option>
+          {promptCategories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+        </select>
+        {suggestingCategory && (
+          <Loader2 size={14} className="absolute right-7 top-1/2 -translate-y-1/2 animate-spin text-accent" />
+        )}
+        {categorySuggested && !suggestingCategory && (
+          <Sparkles size={14} className="absolute right-7 top-1/2 -translate-y-1/2 text-accent" />
+        )}
+      </div>
+      {showCategoryError && (
+        <p className="text-xs text-red-500 -mt-1">Please select a category</p>
+      )}
       <div className="flex gap-2">
         <button
           type="submit"
-          disabled={!title.trim() || submitting}
+          disabled={!isFormValid || submitting}
           className="flex-1 rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Create
