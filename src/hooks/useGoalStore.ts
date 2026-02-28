@@ -1,6 +1,6 @@
 "use client";
 
-import { get, set } from "idb-keyval";
+import { set } from "idb-keyval";
 import { nanoid } from "nanoid";
 import {
   getChat,
@@ -8,15 +8,19 @@ import {
   deleteChat,
   listChats,
 } from "@/hooks/useChatHistory";
-import { saveSignal, deleteSignalsForGoal } from "@/hooks/useSignalStore";
+import { deleteSignalsForGoal } from "@/hooks/useSignalStore";
 import { deleteDocumentsForChat } from "@/hooks/useDocumentStore";
+import { processDetectedSignals } from "@/lib/signal-processing";
 import type {
+  ActionItem,
   ChatRecord,
   DashboardAttribute,
   DashboardSchema,
   DashboardValues,
   GoalMeta,
   GoalStatus,
+  Insight,
+  InsightType,
 } from "@/types";
 
 const CHAT_PREFIX = "chat:";
@@ -147,6 +151,137 @@ export async function updateDashboardAttribute(
   }
 }
 
+export async function addActionItems(
+  goalId: string,
+  items: { text: string; priority: "high" | "medium" | "low"; sourceSignalId?: string }[],
+): Promise<void> {
+  const chat = await getChat(goalId);
+  if (!chat?.goal) return;
+  const existing = chat.goal.actionItems || [];
+  const existingTexts = new Set(existing.map((a) => a.text.toLowerCase()));
+  const newItems: ActionItem[] = items
+    .filter((item) => !existingTexts.has(item.text.toLowerCase()))
+    .map((item) => ({
+      id: nanoid(10),
+      text: item.text,
+      completed: false,
+      priority: item.priority,
+      sourceSignalId: item.sourceSignalId,
+      createdAt: Date.now(),
+    }));
+  if (newItems.length === 0) return;
+  chat.goal.actionItems = [...existing, ...newItems];
+  await set(chatKey(goalId), { ...chat, updatedAt: Date.now() });
+}
+
+export async function toggleActionItem(
+  goalId: string,
+  itemId: string,
+): Promise<void> {
+  const chat = await getChat(goalId);
+  if (!chat?.goal?.actionItems) return;
+  chat.goal.actionItems = chat.goal.actionItems.map((item) =>
+    item.id === itemId ? { ...item, completed: !item.completed } : item,
+  );
+  await set(chatKey(goalId), { ...chat, updatedAt: Date.now() });
+}
+
+export async function addInsights(
+  goalId: string,
+  items: { text: string; type: InsightType; sourceSignalId?: string }[],
+): Promise<void> {
+  const chat = await getChat(goalId);
+  if (!chat?.goal) return;
+  const existing = chat.goal.insights || [];
+  const existingTexts = new Set(existing.map((i) => i.text.toLowerCase()));
+  const newItems: Insight[] = items
+    .filter((item) => !existingTexts.has(item.text.toLowerCase()))
+    .map((item) => ({
+      id: nanoid(10),
+      text: item.text,
+      type: item.type,
+      sourceSignalId: item.sourceSignalId,
+      createdAt: Date.now(),
+    }));
+  if (newItems.length === 0) return;
+  chat.goal.insights = [...existing, ...newItems];
+  await set(chatKey(goalId), { ...chat, updatedAt: Date.now() });
+}
+
+export async function dismissInsight(
+  goalId: string,
+  insightId: string,
+): Promise<void> {
+  const chat = await getChat(goalId);
+  if (!chat?.goal?.insights) return;
+  chat.goal.insights = chat.goal.insights.map((item) =>
+    item.id === insightId ? { ...item, dismissedAt: Date.now() } : item,
+  );
+  await set(chatKey(goalId), { ...chat, updatedAt: Date.now() });
+}
+
+/**
+ * Scan a goal thread's own assistant messages for signals.
+ * Useful when a goal thread already has conversation but signals were
+ * never extracted (e.g., messages generated before self-detection was added).
+ * Best-effort, non-blocking.
+ */
+export async function scanGoalThreadForSignals(
+  goalId: string,
+): Promise<number> {
+  try {
+    const chat = await getChat(goalId);
+    if (!chat?.goal || !chat.goal.dashboardSchema?.length) return 0;
+
+    const assistantMessages = chat.messages.filter((m) => m.role === "assistant");
+    if (assistantMessages.length === 0) return 0;
+
+    const batchedTexts: { msgId: string; text: string }[] = [];
+    for (const msg of assistantMessages) {
+      const text =
+        msg.parts
+          ?.filter(
+            (p): p is { type: "text"; text: string } => p.type === "text",
+          )
+          .map((p) => p.text)
+          .join("") || "";
+      if (text.length > 50) {
+        batchedTexts.push({ msgId: msg.id, text: text.slice(0, 1200) });
+      }
+    }
+
+    if (batchedTexts.length === 0) return 0;
+
+    const combined = batchedTexts.map((t) => t.text).join("\n---\n");
+    const resp = await fetch("/api/detect-signals", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        responseText: combined.slice(0, 6000),
+        goals: [{
+          id: goalId,
+          title: chat.title,
+          description: chat.goal.description,
+          category: chat.goal.category || "",
+          dashboardSchema: chat.goal.dashboardSchema,
+        }],
+      }),
+    });
+
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.signals?.length > 0) {
+        const sourceMessageId = batchedTexts[batchedTexts.length - 1].msgId;
+        return processDetectedSignals(data.signals, goalId, sourceMessageId);
+      }
+    }
+
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
 /**
  * Scan existing regular chats for signals relevant to a newly created goal.
  * Best-effort, non-blocking — intended to be called fire-and-forget.
@@ -169,7 +304,6 @@ export async function scanExistingChatsForSignals(
         .filter((m) => m.role === "assistant")
         .slice(-3);
 
-      // Batch: concatenate all qualifying messages for this chat
       const batchedTexts: { msgId: string; text: string }[] = [];
       for (const msg of assistantMessages) {
         const text =
@@ -186,13 +320,12 @@ export async function scanExistingChatsForSignals(
 
       if (batchedTexts.length === 0) continue;
 
-      // Single API call per chat with all messages concatenated
       const combined = batchedTexts.map((t) => t.text).join("\n---\n");
       const resp = await fetch("/api/detect-signals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          responseText: combined.slice(0, 2000),
+          responseText: combined.slice(0, 6000),
           goals: [{
             id: goalId,
             title,
@@ -205,43 +338,16 @@ export async function scanExistingChatsForSignals(
 
       if (resp.ok) {
         const data = await resp.json();
-        if (data.signals && data.signals.length > 0) {
-          // Use the last message ID as source for all signals from this chat
+        if (data.signals?.length > 0) {
           const sourceMessageId = batchedTexts[batchedTexts.length - 1].msgId;
-          for (const sig of data.signals) {
-            const signalId = nanoid(10);
-            await saveSignal({
-              id: signalId,
-              goalId: sig.goalId,
-              sourceChatId: chat.id,
-              sourceMessageId,
-              summary: sig.summary,
-              category: sig.category,
-              createdAt: Date.now(),
-              extractedValues: sig.extractedValues,
-            });
-            await incrementGoalSignals(sig.goalId);
-            // Apply extracted values to dashboard
-            if (sig.extractedValues && Object.keys(sig.extractedValues).length > 0) {
-              const dashValues: DashboardValues = {};
-              for (const [key, val] of Object.entries(sig.extractedValues)) {
-                dashValues[key] = {
-                  value: val as string | number | boolean,
-                  sourceSignalId: signalId,
-                  updatedAt: Date.now(),
-                };
-              }
-              await updateDashboardValues(sig.goalId, dashValues);
-            }
-            totalSignals++;
-          }
+          const count = await processDetectedSignals(data.signals, chat.id, sourceMessageId);
+          totalSignals += count;
         }
       }
     }
 
     return totalSignals;
   } catch {
-    // Best-effort — don't break goal creation if scanning fails
     return 0;
   }
 }

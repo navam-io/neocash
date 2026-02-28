@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     }
 
     const { text } = await generateText({
-      model: anthropic("claude-haiku-4-5-20251001"),
+      model: anthropic("claude-sonnet-4-6"),
       system: `You generate dashboard schemas for personal wealth management goals. Given a goal title, description, and optional category, return a JSON array of 3-8 typed attributes that a user would want to track for this goal.
 
 Each attribute must have:

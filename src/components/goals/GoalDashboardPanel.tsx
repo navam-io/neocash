@@ -3,18 +3,26 @@
 import { useState } from "react";
 import { X, Settings } from "lucide-react";
 import { DashboardAttribute } from "./DashboardAttribute";
+import { DashboardActionItems } from "./DashboardActionItems";
+import { DashboardInsights } from "./DashboardInsights";
 import { DashboardSchemaEditor } from "./DashboardSchemaEditor";
 import type {
+  ActionItem,
   DashboardSchema,
   DashboardValues,
+  Insight,
   DashboardAttribute as DashboardAttrType,
 } from "@/types";
 
 interface GoalDashboardPanelProps {
   schema: DashboardSchema;
   values: DashboardValues;
+  actionItems?: ActionItem[];
+  insights?: Insight[];
   onClose: () => void;
   onSaveSchema: (schema: DashboardSchema) => void;
+  onToggleActionItem?: (itemId: string) => void;
+  onDismissInsight?: (insightId: string) => void;
   onSourceClick?: (signalId: string) => void;
   isMobile?: boolean;
 }
@@ -22,8 +30,12 @@ interface GoalDashboardPanelProps {
 export function GoalDashboardPanel({
   schema,
   values,
+  actionItems,
+  insights,
   onClose,
   onSaveSchema,
+  onToggleActionItem,
+  onDismissInsight,
   onSourceClick,
   isMobile,
 }: GoalDashboardPanelProps) {
@@ -70,15 +82,42 @@ export function GoalDashboardPanel({
             onCancel={() => setEditing(false)}
           />
         ) : (
-          <div className="flex flex-col gap-0.5">
-            {schema.map((attr: DashboardAttrType) => (
-              <DashboardAttribute
-                key={attr.id}
-                attribute={attr}
-                value={values[attr.id]}
-                onSourceClick={onSourceClick}
-              />
-            ))}
+          <div className="flex flex-col">
+            {/* Metrics */}
+            <div className="flex flex-col gap-0.5">
+              {schema.map((attr: DashboardAttrType) => (
+                <DashboardAttribute
+                  key={attr.id}
+                  attribute={attr}
+                  value={values[attr.id]}
+                  onSourceClick={onSourceClick}
+                />
+              ))}
+            </div>
+
+            {/* Action Items */}
+            {actionItems && actionItems.length > 0 && onToggleActionItem && (
+              <>
+                <div className="mx-3 my-2 border-t border-border" />
+                <DashboardActionItems
+                  items={actionItems}
+                  onToggle={onToggleActionItem}
+                  onSourceClick={onSourceClick}
+                />
+              </>
+            )}
+
+            {/* Insights */}
+            {insights && insights.some((i) => !i.dismissedAt) && onDismissInsight && (
+              <>
+                <div className="mx-3 my-2 border-t border-border" />
+                <DashboardInsights
+                  insights={insights}
+                  onDismiss={onDismissInsight}
+                  onSourceClick={onSourceClick}
+                />
+              </>
+            )}
           </div>
         )}
       </div>
@@ -88,6 +127,12 @@ export function GoalDashboardPanel({
         <div className="border-t border-border px-4 py-2">
           <span className="text-[11px] text-text-tertiary">
             {trackedCount} of {schema.length} tracked
+            {actionItems && actionItems.length > 0 && (
+              <> · {actionItems.filter((a) => !a.completed).length} actions</>
+            )}
+            {insights && insights.filter((i) => !i.dismissedAt).length > 0 && (
+              <> · {insights.filter((i) => !i.dismissedAt).length} insights</>
+            )}
           </span>
         </div>
       )}

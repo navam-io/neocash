@@ -20,12 +20,14 @@ import {
   listGoals,
   updateGoalStatus,
   toggleCrossPollination,
-  incrementGoalSignals,
-  updateDashboardValues,
   setDashboardSchema,
+  toggleActionItem,
+  dismissInsight,
+  scanGoalThreadForSignals,
 } from "@/hooks/useGoalStore";
-import { saveSignal, listSignalsForGoal } from "@/hooks/useSignalStore";
+import { listSignalsForGoal } from "@/hooks/useSignalStore";
 import { extractDocumentMetadata } from "@/lib/file-utils";
+import { processDetectedSignals } from "@/lib/signal-processing";
 import type { DashboardSchema, GoalMeta, GoalStatus, SignalRecord } from "@/types";
 
 const mobileQuery = "(max-width: 767px)";
@@ -62,6 +64,7 @@ export default function ChatPage({
   const [goalTitle, setGoalTitle] = useState("");
   const [signals, setSignals] = useState<SignalRecord[]>([]);
   const [dashboardOpen, setDashboardOpen] = useState(false);
+  const [chatError, setChatError] = useState<{ message: string; code?: string } | null>(null);
 
   // Build transport body — include goalContext when this is a goal thread
   const transportBody = goalMeta
@@ -79,7 +82,24 @@ export default function ChatPage({
       api: "/api/chat",
       body: transportBody,
     }),
+    onError: async (error) => {
+      try {
+        // Try to parse structured error from API response
+        const body = JSON.parse(error.message);
+        if (body.code === "CONTEXT_OVERFLOW") {
+          setChatError({
+            message: "This conversation is very long. Older document content has been summarized to continue.",
+            code: "CONTEXT_OVERFLOW",
+          });
+          return;
+        }
+      } catch {
+        // Not a JSON error — fall through to generic
+      }
+      setChatError({ message: "Something went wrong. Please try again." });
+    },
     onFinish: async ({ message }) => {
+      setChatError(null);
       refreshChatList();
       if (goalMeta) refreshGoalList();
 
@@ -109,79 +129,66 @@ export default function ChatPage({
         // Non-critical — metadata extraction is best-effort
       }
 
-      // Cross-pollination: detect signals for active goals (non-goal chats only)
-      if (!goalMeta) {
-        try {
-          const responseText =
-            message.parts
-              ?.filter(
-                (p): p is { type: "text"; text: string } => p.type === "text",
-              )
-              .map((p) => p.text)
-              .join("") || "";
+      // Signal detection: self-detection for goal threads, cross-pollination for regular chats
+      try {
+        const responseText =
+          message.parts
+            ?.filter(
+              (p): p is { type: "text"; text: string } => p.type === "text",
+            )
+            .map((p) => p.text)
+            .join("") || "";
 
-          if (responseText.length > 50) {
+        if (responseText.length > 50) {
+          let goalSummaries: { id: string; title: string; description: string; category: string; dashboardSchema?: DashboardSchema }[] = [];
+
+          if (goalMeta) {
+            // Self-detection: goal thread analyzes its own messages
+            if (goalMeta.status === "active" && goalMeta.dashboardSchema?.length) {
+              const chat = await getChat(chatId);
+              goalSummaries = [{
+                id: chatId,
+                title: chat?.title || goalTitle,
+                description: goalMeta.description,
+                category: goalMeta.category || "",
+                dashboardSchema: goalMeta.dashboardSchema,
+              }];
+            }
+          } else {
+            // Cross-pollination: non-goal chats feed signals into active goals
             const activeGoals = await listGoals();
             const pollinateGoals = activeGoals.filter(
-              (g) =>
-                g.goal?.status === "active" && g.goal?.crossPollinate,
+              (g) => g.goal?.status === "active" && g.goal?.crossPollinate,
             );
+            goalSummaries = pollinateGoals.map((g) => ({
+              id: g.id,
+              title: g.title,
+              description: g.goal!.description,
+              category: g.goal!.category || "",
+              dashboardSchema: g.goal!.dashboardSchema,
+            }));
+          }
 
-            if (pollinateGoals.length > 0) {
-              const goalSummaries = pollinateGoals.map((g) => ({
-                id: g.id,
-                title: g.title,
-                description: g.goal!.description,
-                category: g.goal!.category || "",
-                dashboardSchema: g.goal!.dashboardSchema,
-              }));
+          if (goalSummaries.length > 0) {
+            const resp = await fetch("/api/detect-signals", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                responseText: responseText.slice(0, 6000),
+                goals: goalSummaries,
+              }),
+            });
 
-              const resp = await fetch("/api/detect-signals", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  responseText: responseText.slice(0, 2000),
-                  goals: goalSummaries,
-                }),
-              });
-
-              if (resp.ok) {
-                const data = await resp.json();
-                if (data.signals && data.signals.length > 0) {
-                  for (const sig of data.signals) {
-                    const signalId = nanoid(10);
-                    await saveSignal({
-                      id: signalId,
-                      goalId: sig.goalId,
-                      sourceChatId: chatId,
-                      sourceMessageId: message.id,
-                      summary: sig.summary,
-                      category: sig.category,
-                      createdAt: Date.now(),
-                      extractedValues: sig.extractedValues,
-                    });
-                    await incrementGoalSignals(sig.goalId);
-                    // Apply extracted values to dashboard
-                    if (sig.extractedValues && Object.keys(sig.extractedValues).length > 0) {
-                      const dashValues: Record<string, { value: string | number | boolean; sourceSignalId: string; updatedAt: number }> = {};
-                      for (const [key, val] of Object.entries(sig.extractedValues)) {
-                        dashValues[key] = {
-                          value: val as string | number | boolean,
-                          sourceSignalId: signalId,
-                          updatedAt: Date.now(),
-                        };
-                      }
-                      await updateDashboardValues(sig.goalId, dashValues);
-                    }
-                  }
-                  refreshGoalList();
-                }
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data.signals?.length > 0) {
+                await processDetectedSignals(data.signals, chatId, message.id, refreshGoalList);
               }
             }
           }
-        } catch {
-          // Non-critical — signal detection is best-effort
         }
+      } catch {
+        // Non-critical — signal detection is best-effort
       }
     },
   });
@@ -207,6 +214,17 @@ export default function ChatPage({
           setGoalTitle(chat.title);
           const sigs = await listSignalsForGoal(chatId);
           setSignals(sigs);
+          // Retroactive self-scan: if goal has a dashboard but no signals yet,
+          // scan the thread's own messages to populate dashboard values
+          if (
+            sigs.length === 0 &&
+            chat.goal.dashboardSchema?.length &&
+            chat.messages.length > 0
+          ) {
+            scanGoalThreadForSignals(chatId).then((count) => {
+              if (count > 0) refreshGoalList();
+            });
+          }
         }
       }
       setInitialLoaded(true);
@@ -317,6 +335,27 @@ export default function ChatPage({
     [signals, router],
   );
 
+  const handleToggleActionItem = useCallback(
+    async (itemId: string) => {
+      await toggleActionItem(chatId, itemId);
+      // Refresh local goalMeta state
+      const chat = await getChat(chatId);
+      if (chat?.goal) setGoalMeta(chat.goal);
+      refreshGoalList();
+    },
+    [chatId, refreshGoalList],
+  );
+
+  const handleDismissInsight = useCallback(
+    async (insightId: string) => {
+      await dismissInsight(chatId, insightId);
+      const chat = await getChat(chatId);
+      if (chat?.goal) setGoalMeta(chat.goal);
+      refreshGoalList();
+    },
+    [chatId, refreshGoalList],
+  );
+
   const hasDashboard = !!(goalMeta?.dashboardSchema && goalMeta.dashboardSchema.length > 0);
 
   return (
@@ -338,6 +377,23 @@ export default function ChatPage({
         {/* Chat area */}
         <div className="flex flex-1 min-w-0 flex-col">
           <ChatMessages messages={messages} isLoading={isLoading} />
+
+          {chatError && (
+            <div className="shrink-0 px-4">
+              <div className="mx-auto max-w-2xl">
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  <span>{chatError.message}</span>
+                  <button
+                    onClick={() => setChatError(null)}
+                    className="shrink-0 text-amber-600 hover:text-amber-800 transition-colors"
+                    aria-label="Dismiss error"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="shrink-0 px-4 pb-4">
             <div className="mx-auto max-w-2xl">
@@ -373,8 +429,12 @@ export default function ChatPage({
           <GoalDashboardPanel
             schema={goalMeta!.dashboardSchema!}
             values={goalMeta!.dashboardValues || {}}
+            actionItems={goalMeta!.actionItems}
+            insights={goalMeta!.insights}
             onClose={handleToggleDashboard}
             onSaveSchema={handleSaveSchema}
+            onToggleActionItem={handleToggleActionItem}
+            onDismissInsight={handleDismissInsight}
             onSourceClick={handleSourceClick}
             isMobile={isMobile}
           />

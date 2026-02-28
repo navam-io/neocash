@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return Response.json({ signals: [] });
     }
 
-    const truncated = responseText.slice(0, 2000);
+    const truncated = responseText.slice(0, 6000);
 
     const hasAnySchema = goals.some((g: GoalInput) => g.dashboardSchema?.length);
 
@@ -38,14 +38,18 @@ export async function POST(req: Request) {
       })
       .join("\n");
 
-    const baseInstruction = `You analyze financial conversation text and determine if it's relevant to any active financial goals. Return ONLY a JSON array of matches. Each match should have: goalId (string), summary (one sentence explaining the relevance), category (e.g. "tax_insight", "investment_signal", "budget_update", "savings_progress", "market_signal"). If no goals match, return an empty array []. Be selective — only flag genuinely relevant insights, not tangential mentions.`;
+    const baseInstruction = `You analyze financial conversation text and determine if it's relevant to any active financial goals. Return ONLY a JSON array of matches. Each match should have: goalId (string), summary (one sentence explaining the relevance), category (e.g. "tax_insight", "investment_signal", "budget_update", "savings_progress", "market_signal"). If no goals match, return an empty array []. Be selective — only flag genuinely relevant insights, not tangential mentions.
+
+When you detect a signal, also analyze the conversation for:
+1. "actionItems" — concrete next steps the user should take (max 5). Each: { "text": string, "priority": "high" | "medium" | "low" }. Focus on specific, actionable tasks like "Verify 401k contribution limits" or "Request corrected 1099-B from broker". Omit if none.
+2. "insights" — observations about missing information, recommendations, warnings, or opportunities (max 5). Each: { "text": string, "type": "missing_info" | "recommendation" | "warning" | "opportunity" }. Examples: missing documents, potential tax issues, optimization opportunities. Omit if none.`;
 
     const schemaInstruction = hasAnySchema
       ? `\n\nSome goals have dashboard attributes listed. When you detect a signal for such a goal, also include an "extractedValues" object mapping attribute IDs to concrete values found in the text. Only include values you can extract with confidence. Use appropriate types: numbers for currency/percent/number (no $ or % symbols), ISO date strings for dates, booleans for boolean attributes, plain strings for text. If no values can be extracted, omit extractedValues.`
       : "";
 
     const { text } = await generateText({
-      model: anthropic("claude-haiku-4-5-20251001"),
+      model: anthropic("claude-sonnet-4-6"),
       system: baseInstruction + schemaInstruction,
       prompt: `## Active Goals\n${goalList}\n\n## Conversation Text\n${truncated}\n\nReturn JSON array of signal matches:`,
     });

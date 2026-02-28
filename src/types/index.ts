@@ -2,6 +2,27 @@ import type { UIMessage } from "ai";
 
 export type GoalStatus = "active" | "paused" | "completed";
 
+// ─── Action Items & Insights ────────────────────
+export interface ActionItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  priority: "high" | "medium" | "low";
+  sourceSignalId?: string;
+  createdAt: number;
+}
+
+export type InsightType = "missing_info" | "recommendation" | "warning" | "opportunity";
+
+export interface Insight {
+  id: string;
+  text: string;
+  type: InsightType;
+  sourceSignalId?: string;
+  createdAt: number;
+  dismissedAt?: number;
+}
+
 // ─── Dashboard Types ─────────────────────────────
 export type DashboardAttributeType =
   | "currency"
@@ -40,6 +61,8 @@ export interface GoalMeta {
   origin?: "custom" | "predefined";  // custom = "+" form, predefined = Goals tab prompt
   dashboardSchema?: DashboardSchema;
   dashboardValues?: DashboardValues;
+  actionItems?: ActionItem[];
+  insights?: Insight[];
 }
 
 export interface SignalRecord {
@@ -51,6 +74,8 @@ export interface SignalRecord {
   category: string;            // "tax_insight", "investment_signal", etc.
   createdAt: number;
   extractedValues?: Record<string, string | number | boolean>;
+  actionItems?: { text: string; priority: "high" | "medium" | "low" }[];
+  insights?: { text: string; type: InsightType }[];
 }
 
 export interface ChatRecord {
