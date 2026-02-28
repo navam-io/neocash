@@ -29,9 +29,10 @@ import { listSignalsForGoal } from "@/hooks/useSignalStore";
 import { extractDocumentMetadata } from "@/lib/file-utils";
 import { processDetectedSignals } from "@/lib/signal-processing";
 import { processExtractedMemories } from "@/lib/memory-processing";
+import { processDetectedCompletions } from "@/lib/action-completion";
 import { prepareTextForSignalDetection } from "@/lib/signal-text";
 import { listAllMemories } from "@/hooks/useMemoryStore";
-import type { DashboardSchema, GoalMeta, GoalStatus, MemoryRecord, SignalRecord } from "@/types";
+import type { ChatRecord, DashboardSchema, GoalMeta, GoalStatus, MemoryRecord, SignalRecord } from "@/types";
 
 const mobileQuery = "(max-width: 767px)";
 const subscribe = (cb: () => void) => {
@@ -71,6 +72,7 @@ export default function ChatPage({
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [chatError, setChatError] = useState<{ message: string; code?: string } | null>(null);
   const [memories, setMemories] = useState<MemoryRecord[]>([]);
+  const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(new Set());
 
   // Build transport body — include goalContext when this is a goal thread
   const baseBody = { model: selectedModel, researchMode, webSearch, memories };
@@ -134,6 +136,16 @@ export default function ChatPage({
         // Non-critical — metadata extraction is best-effort
       }
 
+      // Fetch active goals once — shared by signal detection + auto-completion
+      let allActiveGoals: ChatRecord[] = [];
+      try {
+        allActiveGoals = (await listGoals()).filter(
+          (g) => g.goal?.status === "active",
+        );
+      } catch {
+        // Non-critical — goals fetch is best-effort
+      }
+
       // Signal detection: self-detection for goal threads, cross-pollination for regular chats
       try {
         const responseText =
@@ -171,9 +183,8 @@ export default function ChatPage({
             }
           } else {
             // Cross-pollination: non-goal chats feed signals into active goals
-            const activeGoals = await listGoals();
-            const pollinateGoals = activeGoals.filter(
-              (g) => g.goal?.status === "active" && g.goal?.crossPollinate,
+            const pollinateGoals = allActiveGoals.filter(
+              (g) => g.goal?.crossPollinate,
             );
             goalSummaries = pollinateGoals.map((g) => {
               const activeActions = (g.goal!.actionItems || [])
@@ -259,6 +270,61 @@ export default function ChatPage({
         }
       } catch {
         // Non-critical — memory extraction is best-effort
+      }
+
+      // Auto-completion detection: check if any pending action items were completed
+      try {
+        const completionText =
+          message.parts
+            ?.filter(
+              (p): p is { type: "text"; text: string } => p.type === "text",
+            )
+            .map((p) => p.text)
+            .join("") || "";
+
+        if (completionText.length > 200 && allActiveGoals.length > 0) {
+          // Collect all pending actions across all active goals
+          const pendingActions: { id: string; goalId: string; text: string }[] = [];
+          const actionGoalMap = new Map<string, string>();
+
+          for (const goal of allActiveGoals) {
+            const items = goal.goal?.actionItems || [];
+            for (const item of items) {
+              if (!item.completed) {
+                pendingActions.push({
+                  id: item.id,
+                  goalId: goal.id,
+                  text: item.text,
+                });
+                actionGoalMap.set(item.id, goal.id);
+              }
+            }
+          }
+
+          if (pendingActions.length > 0) {
+            const resp = await fetch("/api/detect-completions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                responseText: prepareTextForSignalDetection(completionText),
+                actions: pendingActions,
+              }),
+            });
+
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data.completedIds?.length > 0) {
+                await processDetectedCompletions(data.completedIds, actionGoalMap);
+                refreshGoalList();
+                // Trigger animation for auto-completed items
+                setRecentlyCompleted(new Set(data.completedIds));
+                setTimeout(() => setRecentlyCompleted(new Set()), 2000);
+              }
+            }
+          }
+        }
+      } catch {
+        // Non-critical — auto-completion detection is best-effort
       }
     },
   });
@@ -531,6 +597,7 @@ export default function ChatPage({
             onToggleActionItem={handleToggleActionItem}
             onDismissInsight={handleDismissInsight}
             onSourceClick={handleSourceClick}
+            recentlyCompleted={recentlyCompleted}
             isMobile={isMobile}
           />
         )}

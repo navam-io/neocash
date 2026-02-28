@@ -8,6 +8,7 @@ interface DashboardActionItemsProps {
   items: ActionItem[];
   onToggle: (itemId: string) => void;
   onSourceClick?: (signalId: string) => void;
+  recentlyCompleted?: Set<string>;
 }
 
 const priorityColors: Record<ActionItem["priority"], string> = {
@@ -20,6 +21,7 @@ export function DashboardActionItems({
   items,
   onToggle,
   onSourceClick,
+  recentlyCompleted,
 }: DashboardActionItemsProps) {
   const [showCompleted, setShowCompleted] = useState(false);
 
@@ -27,6 +29,9 @@ export function DashboardActionItems({
 
   const active = items.filter((i) => !i.completed);
   const completed = items.filter((i) => i.completed);
+  const total = items.length;
+  const completedCount = completed.length;
+  const progressPercent = total > 0 ? (completedCount / total) * 100 : 0;
 
   return (
     <div className="flex flex-col gap-0.5">
@@ -35,11 +40,17 @@ export function DashboardActionItems({
         <span className="text-[11px] font-semibold uppercase tracking-wider text-text-tertiary">
           Action Items
         </span>
-        {active.length > 0 && (
-          <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-accent/15 px-1 text-[10px] font-semibold text-accent">
-            {active.length}
-          </span>
-        )}
+        <span className="text-[10px] font-semibold text-text-tertiary">
+          {completedCount}/{total}
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mx-3 h-1 rounded-full bg-accent/10 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-accent transition-all duration-500 ease-out"
+          style={{ width: `${progressPercent}%` }}
+        />
       </div>
 
       {/* Active items */}
@@ -96,7 +107,11 @@ export function DashboardActionItems({
             completed.map((item) => (
               <label
                 key={item.id}
-                className="group flex items-start gap-2 rounded-md px-3 py-1.5 hover:bg-surface-hover/50 transition-colors cursor-pointer opacity-50"
+                className={`group flex items-start gap-2 rounded-md px-3 py-1.5 transition-colors cursor-pointer ${
+                  recentlyCompleted?.has(item.id)
+                    ? "bg-accent/15 animate-pulse"
+                    : "hover:bg-surface-hover/50 opacity-50"
+                }`}
               >
                 <input
                   type="checkbox"

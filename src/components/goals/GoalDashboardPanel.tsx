@@ -24,6 +24,7 @@ interface GoalDashboardPanelProps {
   onToggleActionItem?: (itemId: string) => void;
   onDismissInsight?: (insightId: string) => void;
   onSourceClick?: (signalId: string) => void;
+  recentlyCompleted?: Set<string>;
   isMobile?: boolean;
 }
 
@@ -37,6 +38,7 @@ export function GoalDashboardPanel({
   onToggleActionItem,
   onDismissInsight,
   onSourceClick,
+  recentlyCompleted,
   isMobile,
 }: GoalDashboardPanelProps) {
   const [editing, setEditing] = useState(false);
@@ -103,6 +105,7 @@ export function GoalDashboardPanel({
                   items={actionItems}
                   onToggle={onToggleActionItem}
                   onSourceClick={onSourceClick}
+                  recentlyCompleted={recentlyCompleted}
                 />
               </>
             )}
