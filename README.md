@@ -1,36 +1,153 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<p align="center">
+  <img src="docs/screenshots/hero.png" width="800" alt="NeoCash — Personal Wealth Manager" />
+</p>
 
-## Getting Started
+<h1 align="center">NeoCash</h1>
 
-First, run the development server:
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat" alt="MIT License" /></a>
+  <img src="https://img.shields.io/badge/Next.js_16-000000?style=flat&logo=nextdotjs" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/Claude_AI-c4704b?style=flat&logo=anthropic&logoColor=white" alt="Claude AI" />
+  <img src="https://img.shields.io/badge/TypeScript-3178c6?style=flat&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Local--First-0d9488?style=flat" alt="Local-First" />
+</p>
+
+<p align="center"><strong>Personal wealth management, without the institution.</strong></p>
+
+---
+
+## Your money. Your data. Your device.
+
+NeoCash is an AI wealth advisor that runs entirely on your machine. No accounts to create. No cloud sync. No one watching. Your financial conversations, documents, and decisions stay in your browser's local storage — always.
+
+Powered by Claude, it understands tax strategy, retirement planning, budgeting, and investment allocation. It remembers your financial profile across conversations, detects connections between topics, and tracks your goals automatically.
+
+---
+
+## Start a conversation about what matters
+
+<p align="center">
+  <img src="docs/screenshots/chat.png" width="800" alt="Chat conversation with budget analysis" />
+</p>
+
+Choose from eight wealth categories — tax, investing, retirement, budgeting, debt, insurance, estate planning, and business income. Each conversation gets Claude's full reasoning with markdown tables, calculations, and specific dollar amounts. Upload documents, search the web, or switch between Claude models mid-conversation.
+
+---
+
+## Set goals. Let the AI connect the dots.
+
+<p align="center">
+  <img src="docs/screenshots/goal-dashboard.png" width="800" alt="Goal thread with dashboard metrics" />
+</p>
+
+Create financial goals and NeoCash monitors your other conversations for relevant signals. Discussing tax-loss harvesting in one chat? The AI detects that the savings could fund your Roth IRA goal in another. Signals flow between conversations automatically — with dashboard metrics, action items, and insights that populate as you talk.
+
+<p align="center">
+  <img src="docs/screenshots/signals.png" width="800" alt="Cross-pollinated signals between conversations" />
+</p>
+
+---
+
+## It remembers so you don't have to
+
+<p align="center">
+  <img src="docs/screenshots/memory.png" width="800" alt="Memory editor showing financial profile" />
+</p>
+
+NeoCash builds a persistent financial profile from your conversations — income, filing status, account balances, key decisions. Facts are injected into every conversation. Decisions are keyword-matched when relevant. You stay in control: edit, delete, or add memories manually through the Memory editor.
+
+---
+
+## Research when you need it
+
+<p align="center">
+  <img src="docs/screenshots/context-menu.png" width="800" alt="Context menu with research options" />
+</p>
+
+Upload spreadsheets, PDFs, and documents for analysis. Switch to research mode for deeper exploration. Search the web for current rates, tax rules, or market data — all without leaving the conversation.
+
+---
+
+## Built for mobile too
+
+<p align="center">
+  <img src="docs/screenshots/mobile.png" width="280" alt="Mobile view" />
+</p>
+
+---
+
+## Quick Start
 
 ```bash
+git clone https://github.com/manavsehgal/neocash.git
+cd neocash
+cp .env.example .env.local  # add your Anthropic API key
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [localhost:3000](http://localhost:3000). Click your profile at the bottom left → **Load Sample Data** to explore the full experience with pre-built conversations, goals, signals, and memories.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Built With
 
-## Learn More
+| Technology | Purpose |
+|-----------|---------|
+| [Next.js 16](https://nextjs.org) | App Router, React Server Components |
+| [Vercel AI SDK v4](https://sdk.vercel.ai) | Streaming chat, tool use, transport layer |
+| [Claude](https://anthropic.com) | Sonnet 4.6 (default), Haiku for background tasks |
+| [Tailwind CSS 4](https://tailwindcss.com) | Design tokens, responsive layout |
+| [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) | Local-first persistence via idb-keyval |
+| [TypeScript](https://typescriptlang.org) | End-to-end type safety |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Architecture
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/
+│   ├── api/chat/          # streamText with goal-aware system prompts
+│   ├── api/detect-signals/ # Haiku-powered cross-pollination
+│   ├── api/extract-memories/ # Haiku-powered memory extraction
+│   └── chat/[chatId]/     # Dynamic chat + goal thread pages
+├── components/
+│   ├── chat/              # ChatPanel, MessageList, GoalSignalPanel
+│   ├── layout/            # Sidebar, MemoryList, DocumentList
+│   └── ui/                # Shared primitives
+├── context/               # AppContext (sidebar state, reactivity)
+├── hooks/                 # IndexedDB stores (chat, goal, signal, memory, document)
+├── lib/                   # Pure functions, system prompts, sample data
+└── types/                 # Shared TypeScript interfaces
+```
 
-## Deploy on Vercel
+**Key patterns:**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Local-first**: All data lives in IndexedDB with `idb-keyval`. No server database, no user accounts.
+- **Fire-and-forget Haiku**: Signal detection and memory extraction run as background Haiku calls on `onFinish` — never blocking the main conversation.
+- **Message windowing**: Long conversations are windowed to stay within context limits while preserving recent history.
+- **Reactive sidebar**: `goalListVersion`, `memoryListVersion`, and `documentListVersion` counters in AppContext trigger re-fetches across components.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Contributing
+
+```bash
+# Run tests
+npx vitest run
+
+# Development
+npm run dev
+
+# Type check
+npx tsc --noEmit
+```
+
+Fork → branch → PR. Keep it local-first. No cloud dependencies.
+
+---
+
+## License
+
+[MIT](LICENSE)

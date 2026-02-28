@@ -1,5 +1,14 @@
 import { set } from "idb-keyval";
-import type { ChatRecord, SignalRecord, DocumentRecord } from "@/types";
+import type {
+  ChatRecord,
+  SignalRecord,
+  DocumentRecord,
+  MemoryRecord,
+  ActionItem,
+  Insight,
+  DashboardSchema,
+  DashboardValues,
+} from "@/types";
 
 // Stable IDs for cross-referencing
 const CHAT_IDS = {
@@ -23,6 +32,17 @@ const DOC_IDS = {
   budget: "smp_doc_bdgt",
   portfolio: "smp_doc_port",
   taxNotes: "smp_doc_taxn",
+};
+
+const MEMORY_IDS = {
+  income: "smp_mem_inc",
+  filingStatus: "smp_mem_fil",
+  state: "smp_mem_sta",
+  match401k: "smp_mem_401",
+  emergencyBalance: "smp_mem_emr",
+  choseRoth: "smp_mem_rot",
+  hysaDecision: "smp_mem_hys",
+  taxLossHarvest: "smp_mem_tlh",
 };
 
 // Timestamps spread across last 14 days
@@ -89,8 +109,227 @@ const emergencyChat: ChatRecord = {
 };
 
 // ---------------------------------------------------------------------------
-// Sample Goals
+// Sample Memories
 // ---------------------------------------------------------------------------
+
+const memories: MemoryRecord[] = [
+  {
+    id: MEMORY_IDS.income,
+    type: "fact",
+    key: "annual_household_income",
+    value: "$185,000",
+    category: "income",
+    confidence: 0.9,
+    source: { chatId: CHAT_IDS.budget, messageId: "b1", extractedAt: daysAgo(12) },
+    createdAt: daysAgo(12),
+    updatedAt: daysAgo(12),
+  },
+  {
+    id: MEMORY_IDS.filingStatus,
+    type: "fact",
+    key: "filing_status",
+    value: "Married Filing Jointly",
+    category: "tax",
+    confidence: 0.85,
+    source: { chatId: CHAT_IDS.budget, messageId: "b6", extractedAt: daysAgo(11) },
+    createdAt: daysAgo(11),
+    updatedAt: daysAgo(11),
+  },
+  {
+    id: MEMORY_IDS.state,
+    type: "fact",
+    key: "state_of_residence",
+    value: "California",
+    category: "tax",
+    confidence: 0.85,
+    source: { chatId: CHAT_IDS.taxLoss, messageId: "t2", extractedAt: daysAgo(8) },
+    createdAt: daysAgo(8),
+    updatedAt: daysAgo(8),
+  },
+  {
+    id: MEMORY_IDS.match401k,
+    type: "fact",
+    key: "employer_401k_match",
+    value: "4% up to $7,400",
+    category: "accounts",
+    confidence: 0.88,
+    source: { chatId: CHAT_IDS.budget, messageId: "b6", extractedAt: daysAgo(11) },
+    createdAt: daysAgo(11),
+    updatedAt: daysAgo(11),
+  },
+  {
+    id: MEMORY_IDS.emergencyBalance,
+    type: "fact",
+    key: "emergency_fund_balance",
+    value: "$28,000",
+    category: "accounts",
+    confidence: 0.95,
+    source: { chatId: CHAT_IDS.emergency, messageId: "e1", extractedAt: daysAgo(5) },
+    createdAt: daysAgo(5),
+    updatedAt: daysAgo(5),
+  },
+  {
+    id: MEMORY_IDS.choseRoth,
+    type: "decision",
+    key: "chose_roth_over_traditional",
+    value: "Contributing to Roth IRA for tax-free growth in retirement",
+    category: "accounts",
+    confidence: 0.88,
+    source: { chatId: CHAT_IDS.budget, messageId: "b6", extractedAt: daysAgo(11) },
+    context: "Household income at $185K supports Roth contributions; tax-free withdrawals preferred over upfront deduction",
+    keywords: ["roth", "ira", "retirement", "tax-free"],
+    createdAt: daysAgo(11),
+    updatedAt: daysAgo(11),
+  },
+  {
+    id: MEMORY_IDS.hysaDecision,
+    type: "decision",
+    key: "high_yield_savings_for_emergency",
+    value: "Using Ally HYSA at 4.5% APY for emergency fund",
+    category: "accounts",
+    confidence: 0.9,
+    source: { chatId: CHAT_IDS.emergency, messageId: "e4", extractedAt: daysAgo(4) },
+    context: "Prioritized instant liquidity and FDIC insurance over slightly higher T-Bill rates",
+    keywords: ["emergency", "savings", "hysa", "ally"],
+    createdAt: daysAgo(4),
+    updatedAt: daysAgo(4),
+  },
+  {
+    id: MEMORY_IDS.taxLossHarvest,
+    type: "decision",
+    key: "tax_loss_harvest_2024",
+    value: "Harvesting $15,500 in losses across index funds and tech stock",
+    category: "tax",
+    confidence: 0.92,
+    source: { chatId: CHAT_IDS.taxLoss, messageId: "t4", extractedAt: daysAgo(7) },
+    context: "Estimated $4,495 in tax savings; swapping into similar-but-not-identical funds to avoid wash sale rules",
+    keywords: ["tax-loss", "harvesting", "capital gains", "wash sale"],
+    createdAt: daysAgo(7),
+    updatedAt: daysAgo(7),
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Sample Goals (with dashboards, action items, insights)
+// ---------------------------------------------------------------------------
+
+const emergencyFundDashboardSchema: DashboardSchema = [
+  { id: "current_balance", name: "Current Balance", type: "currency", description: "Current emergency fund balance" },
+  { id: "target_amount", name: "Target Amount", type: "currency", description: "6-month expense target" },
+  { id: "monthly_contribution", name: "Monthly Contribution", type: "currency", description: "Planned monthly savings" },
+  { id: "months_to_target", name: "Months to Target", type: "number", description: "Estimated months remaining" },
+  { id: "savings_account_apy", name: "Savings APY", type: "percent", description: "Current HYSA interest rate" },
+  { id: "completion_date", name: "Estimated Completion", type: "date", description: "Projected date to reach target" },
+];
+
+const emergencyFundDashboardValues: DashboardValues = {
+  current_balance: { value: 28000, sourceSignalId: SIGNAL_IDS.budgetToEmergency2, updatedAt: daysAgo(4), confidence: 0.95 },
+  target_amount: { value: 41000, updatedAt: daysAgo(10), confidence: 0.9 },
+  monthly_contribution: { value: 1500, sourceSignalId: SIGNAL_IDS.budgetToEmergency1, updatedAt: daysAgo(4), confidence: 0.92 },
+  months_to_target: { value: 9, sourceSignalId: SIGNAL_IDS.budgetToEmergency2, updatedAt: daysAgo(4), confidence: 0.88 },
+  savings_account_apy: { value: 4.5, updatedAt: daysAgo(4), confidence: 0.85 },
+  completion_date: { value: "--", confidence: 0 },
+};
+
+const emergencyFundActionItems: ActionItem[] = [
+  {
+    id: "smp_ai_emr1",
+    text: "Open high-yield savings account at Ally or Marcus",
+    completed: true,
+    priority: "high",
+    createdAt: daysAgo(10),
+  },
+  {
+    id: "smp_ai_emr2",
+    text: "Set up $1,500 automatic monthly transfer",
+    completed: false,
+    priority: "high",
+    sourceSignalId: SIGNAL_IDS.budgetToEmergency2,
+    createdAt: daysAgo(4),
+  },
+  {
+    id: "smp_ai_emr3",
+    text: "Review and cancel unused subscriptions to accelerate timeline",
+    completed: false,
+    priority: "medium",
+    sourceSignalId: SIGNAL_IDS.budgetToEmergency1,
+    createdAt: daysAgo(10),
+  },
+];
+
+const emergencyFundInsights: Insight[] = [
+  {
+    id: "smp_ins_emr1",
+    text: "Once emergency fund reaches $41,000, redirect $1,500/month to Roth IRA for tax-free growth",
+    type: "recommendation",
+    sourceSignalId: SIGNAL_IDS.budgetToEmergency1,
+    createdAt: daysAgo(10),
+  },
+  {
+    id: "smp_ins_emr2",
+    text: "Current HYSA rates of 4.5% will earn ~$400-500 in interest during the build-up period",
+    type: "opportunity",
+    createdAt: daysAgo(4),
+  },
+];
+
+const taxAdvantagedDashboardSchema: DashboardSchema = [
+  { id: "401k_contributed", name: "401(k) Contributed", type: "currency", description: "Year-to-date 401(k) contributions" },
+  { id: "401k_limit", name: "401(k) Limit", type: "currency", description: "Annual 401(k) contribution limit" },
+  { id: "roth_ira_contributed", name: "Roth IRA Contributed", type: "currency", description: "Year-to-date Roth IRA contributions" },
+  { id: "hsa_contributed", name: "HSA Contributed", type: "currency", description: "Year-to-date HSA contributions" },
+  { id: "total_tax_savings", name: "Total Tax Savings", type: "currency", description: "Estimated tax savings this year" },
+  { id: "employer_match_captured", name: "Full Match Captured", type: "boolean", description: "Whether full employer match is being captured" },
+];
+
+const taxAdvantagedDashboardValues: DashboardValues = {
+  "401k_contributed": { value: 8200, updatedAt: daysAgo(6), confidence: 0.85 },
+  "401k_limit": { value: 23500, updatedAt: daysAgo(9), confidence: 1 },
+  roth_ira_contributed: { value: "--", confidence: 0 },
+  hsa_contributed: { value: "--", confidence: 0 },
+  total_tax_savings: { value: 4495, sourceSignalId: SIGNAL_IDS.taxToGoal, updatedAt: daysAgo(7), confidence: 0.88 },
+  employer_match_captured: { value: true, updatedAt: daysAgo(6), confidence: 0.9 },
+};
+
+const taxAdvantagedActionItems: ActionItem[] = [
+  {
+    id: "smp_ai_tax1",
+    text: "Verify 401(k) contribution rate is set to maximize employer match",
+    completed: true,
+    priority: "high",
+    createdAt: daysAgo(9),
+  },
+  {
+    id: "smp_ai_tax2",
+    text: "Open Roth IRA if not already established",
+    completed: false,
+    priority: "high",
+    createdAt: daysAgo(9),
+  },
+  {
+    id: "smp_ai_tax3",
+    text: "Check HSA eligibility with current health plan",
+    completed: false,
+    priority: "medium",
+    createdAt: daysAgo(9),
+  },
+];
+
+const taxAdvantagedInsights: Insight[] = [
+  {
+    id: "smp_ins_tax1",
+    text: "Roth IRA contribution status is unknown — confirm eligibility based on MAGI",
+    type: "missing_info",
+    createdAt: daysAgo(9),
+  },
+  {
+    id: "smp_ins_tax2",
+    text: "Tax-loss harvesting savings of $4,495 should be redirected to tax-advantaged accounts before year-end",
+    type: "warning",
+    sourceSignalId: SIGNAL_IDS.taxToGoal,
+    createdAt: daysAgo(7),
+  },
+];
 
 const emergencyFundGoal: ChatRecord = {
   id: GOAL_IDS.emergencyFund,
@@ -106,6 +345,10 @@ const emergencyFundGoal: ChatRecord = {
     signalCount: 2,
     crossPollinate: true,
     origin: "custom",
+    dashboardSchema: emergencyFundDashboardSchema,
+    dashboardValues: emergencyFundDashboardValues,
+    actionItems: emergencyFundActionItems,
+    insights: emergencyFundInsights,
   },
   messages: [
     msg("g1_u", "user", "I want to build a 6-month emergency fund. We currently have $28,000 saved and need about $41,000 total."),
@@ -127,6 +370,10 @@ const taxAdvantagedGoal: ChatRecord = {
     signalCount: 1,
     crossPollinate: true,
     origin: "predefined",
+    dashboardSchema: taxAdvantagedDashboardSchema,
+    dashboardValues: taxAdvantagedDashboardValues,
+    actionItems: taxAdvantagedActionItems,
+    insights: taxAdvantagedInsights,
   },
   messages: [
     msg("g2_u", "user", "I want to make sure I'm maximizing all my tax-advantaged account contributions this year."),
@@ -135,7 +382,7 @@ const taxAdvantagedGoal: ChatRecord = {
 };
 
 // ---------------------------------------------------------------------------
-// Sample Signals
+// Sample Signals (enriched with extractedValues, actionItems, insights)
 // ---------------------------------------------------------------------------
 
 const signals: SignalRecord[] = [
@@ -147,6 +394,13 @@ const signals: SignalRecord[] = [
     summary: "Tax-loss harvesting could free up $4,495 in tax savings — potential redirect to Roth IRA contributions.",
     category: "tax_insight",
     createdAt: daysAgo(7),
+    extractedValues: { total_tax_savings: 4495 },
+    actionItems: [
+      { text: "Redirect $4,495 tax savings to Roth IRA before year-end", priority: "high" },
+    ],
+    insights: [
+      { text: "Tax-loss harvesting savings should be reinvested in tax-advantaged accounts for compounding benefit", type: "recommendation" },
+    ],
   },
   {
     id: SIGNAL_IDS.budgetToEmergency1,
@@ -156,6 +410,10 @@ const signals: SignalRecord[] = [
     summary: "Budget review suggests redirecting emergency fund overflow to tax-advantaged accounts once 6-month target is met.",
     category: "savings_signal",
     createdAt: daysAgo(10),
+    extractedValues: { monthly_contribution: 1500 },
+    insights: [
+      { text: "Once $41K target is reached, redirect $1,500/month overflow to Roth IRA for tax-free growth", type: "recommendation" },
+    ],
   },
   {
     id: SIGNAL_IDS.budgetToEmergency2,
@@ -165,6 +423,10 @@ const signals: SignalRecord[] = [
     summary: "Emergency fund plan targets $1,500/month automatic contributions — estimated completion in 9 months.",
     category: "savings_signal",
     createdAt: daysAgo(4),
+    extractedValues: { months_to_target: 9, current_balance: 28000 },
+    actionItems: [
+      { text: "Set up automatic $1,500 monthly transfer to HYSA", priority: "high" },
+    ],
   },
 ];
 
@@ -225,5 +487,10 @@ export async function loadSampleData(): Promise<void> {
   // Documents
   for (const doc of documents) {
     await set(`doc:${doc.id}`, doc);
+  }
+
+  // Memories
+  for (const memory of memories) {
+    await set(`memory:${memory.id}`, memory);
   }
 }
