@@ -92,10 +92,10 @@ export function DashboardAttribute({
           </span>
         )}
       </div>
-      <div className="flex items-center gap-1.5 shrink-0">
+      <div className="flex items-center gap-1.5 shrink-0 max-w-[55%] overflow-hidden">
         {hasValue ? (
           <>
-            <span className="text-sm font-semibold text-text-primary tabular-nums">
+            <span className="text-sm font-semibold text-text-primary tabular-nums truncate">
               {formatValue(attribute.type, value.value)}
             </span>
             {value.sourceSignalId && onSourceClick && (

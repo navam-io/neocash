@@ -74,7 +74,7 @@ export function GoalDashboardPanel({
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto py-2">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-2">
         {editing ? (
           <DashboardSchemaEditor
             schema={schema}
