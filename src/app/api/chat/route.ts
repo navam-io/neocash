@@ -1,7 +1,8 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { streamText, convertToModelMessages } from "ai";
-import { SYSTEM_PROMPT, buildGoalSystemPrompt, buildMemoryContext } from "@/lib/system-prompt";
+import { streamText, convertToModelMessages, stepCountIs } from "ai";
+import { SYSTEM_PROMPT, buildGoalSystemPrompt, buildMemoryContext, buildToolInstructions } from "@/lib/system-prompt";
 import { prepareMessagesForAPI } from "@/lib/message-windowing";
+import { allTools } from "@/lib/tool-schemas";
 
 export const maxDuration = 60;
 
@@ -44,6 +45,9 @@ export async function POST(req: Request) {
       systemPrompt += buildMemoryContext(memories, userText);
     }
 
+    // Append tool instructions
+    systemPrompt += buildToolInstructions(!!goalContext);
+
     // Append web search instruction so the model knows it can search
     if (webSearch) {
       systemPrompt += `\n\n## Web Search\n\nYou have access to real-time web search. Use it proactively to find current market data, news, stock prices, and other time-sensitive information when relevant to the user's question. Do not claim you lack internet access — you can search the web.`;
@@ -53,7 +57,7 @@ export async function POST(req: Request) {
       model: anthropic(model || "claude-sonnet-4-6"),
       system: systemPrompt,
       messages: await convertToModelMessages(windowedMessages),
-      ...(webSearch && { maxSteps: 5 }),
+      stopWhen: stepCountIs(10),
       ...(researchMode && {
         providerOptions: {
           anthropic: {
@@ -61,14 +65,13 @@ export async function POST(req: Request) {
           },
         },
       }),
-      ...(webSearch && {
-        tools: {
-          webSearch: anthropic.tools.webSearch_20250305(),
-        },
-      }),
+      tools: {
+        ...allTools,
+        ...(webSearch && { webSearch: anthropic.tools.webSearch_20250305() }),
+      },
     });
 
-    return result.toTextStreamResponse();
+    return result.toUIMessageStreamResponse();
   } catch (error) {
     console.error("Chat API error:", error);
 

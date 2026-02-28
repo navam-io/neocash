@@ -1,10 +1,13 @@
 "use client";
 
 import type { UIMessage } from "ai";
+import { isToolOrDynamicToolUIPart } from "ai";
 import { FileText, FileSpreadsheet, FileType, File } from "lucide-react";
 
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { LoadingDots } from "@/components/ui/LoadingDots";
+import { ToolCallChip } from "@/components/chat/ToolCallChip";
+import { ToolCallGroup } from "@/components/chat/ToolCallGroup";
 import { getFileCategory } from "@/lib/file-utils";
 
 interface ChatMessageProps {
@@ -44,11 +47,104 @@ function MessageDocIcon({ mediaType }: { mediaType: string }) {
   return <File size={14} className="text-text-tertiary shrink-0" />;
 }
 
+// ─── Tool Part Helpers ───────────────────────────
+
+type MessagePart = UIMessage["parts"][number];
+
+function hasToolParts(message: UIMessage): boolean {
+  return message.parts?.some((p) => isToolOrDynamicToolUIPart(p)) ?? false;
+}
+
+function getToolInfo(part: MessagePart): {
+  toolName: string;
+  toolCallId: string;
+  state: string;
+  input: unknown;
+  output: unknown;
+  isError: boolean;
+} | null {
+  if (isToolOrDynamicToolUIPart(part)) {
+    // Static tool parts have type "tool-<name>", dynamic have type "dynamic-tool"
+    const toolName =
+      part.type === "dynamic-tool"
+        ? part.toolName
+        : part.type.replace(/^tool-/, "");
+    const output = "output" in part ? part.output : undefined;
+    const isError = part.state === "output-error" || (part.state === "output-available" && output != null && typeof output === "object" && "error" in (output as Record<string, unknown>));
+    return {
+      toolName,
+      toolCallId: part.toolCallId,
+      state: part.state,
+      input: part.input,
+      output,
+      isError,
+    };
+  }
+  return null;
+}
+
+// ─── Parts-Based Rendering for Assistant Messages ─
+
+function AssistantParts({ parts }: { parts: MessagePart[] }) {
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+
+  while (i < parts.length) {
+    const part = parts[i];
+
+    if (part.type === "text" && part.text) {
+      elements.push(
+        <MarkdownRenderer key={`text-${i}`} content={part.text} />,
+      );
+      i++;
+    } else if (isToolOrDynamicToolUIPart(part)) {
+      // Group consecutive tool parts
+      const toolParts: { info: NonNullable<ReturnType<typeof getToolInfo>>; index: number }[] = [];
+      while (i < parts.length && isToolOrDynamicToolUIPart(parts[i])) {
+        const info = getToolInfo(parts[i]);
+        if (info) toolParts.push({ info, index: i });
+        i++;
+      }
+
+      const chips = toolParts.map(({ info, index }) => (
+        <ToolCallChip
+          key={`tool-${index}`}
+          toolName={info.toolName}
+          state={info.state}
+          input={info.input}
+          output={info.output}
+          isError={info.isError}
+        />
+      ));
+
+      if (chips.length > 1) {
+        elements.push(
+          <ToolCallGroup key={`group-${toolParts[0].index}`}>
+            {chips}
+          </ToolCallGroup>,
+        );
+      } else {
+        elements.push(chips[0]);
+      }
+    } else {
+      // Skip other part types (step-start, source, reasoning, etc.)
+      i++;
+    }
+  }
+
+  return <>{elements}</>;
+}
+
+// ─── Main Component ──────────────────────────────
+
 export function ChatMessage({ message, isLoading }: ChatMessageProps) {
   const isUser = message.role === "user";
   const text = getMessageText(message);
   const images = isUser ? getMessageImages(message) : [];
   const documents = isUser ? getMessageDocuments(message) : [];
+
+  // Assistant messages with tool parts use parts-based rendering
+  const usePartsRendering = !isUser && hasToolParts(message);
 
   return (
     <div className={`w-full ${isUser ? "flex justify-end" : ""}`}>
@@ -96,6 +192,11 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
             {text && (
               <p className="text-text-primary whitespace-pre-wrap">{text}</p>
             )}
+          </>
+        ) : usePartsRendering ? (
+          <>
+            <AssistantParts parts={message.parts} />
+            {isLoading && !text && <LoadingDots />}
           </>
         ) : isLoading && !text ? (
           <LoadingDots />

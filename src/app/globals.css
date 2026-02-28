@@ -228,3 +228,25 @@ body {
 .category-tab {
   transition: background-color 150ms ease, border-color 150ms ease;
 }
+
+/* ─── Tool chip enter animation ──────────────── */
+@keyframes tool-chip-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tool-chip-enter {
+  animation: tool-chip-enter 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-chip-enter {
+    animation: none;
+  }
+}

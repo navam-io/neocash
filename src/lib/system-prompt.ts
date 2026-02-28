@@ -1,4 +1,4 @@
-import type { GoalMeta, MemoryRecord, SignalRecord } from "@/types";
+import type { GoalMeta, MemoryCategory, MemoryRecord, SignalRecord } from "@/types";
 
 export const SYSTEM_PROMPT = `You are NeoCash, a knowledgeable and thoughtful personal wealth management assistant. You help users with:
 
@@ -211,3 +211,77 @@ export function buildMemoryContext(
   context += "\nIntegrate this profile data into your advice. When the user asks about their portfolio, holdings, or finances, use this data directly.";
   return context;
 }
+
+// ─── Tool Instructions ───────────────────────────
+
+const VALID_CATEGORIES: MemoryCategory[] = [
+  "income", "tax", "accounts", "debt", "family",
+  "employment", "property", "goals", "general",
+];
+
+export function buildToolInstructions(isGoalThread: boolean): string {
+  let instructions = `\n\n## Tool Usage
+
+You have tools to read and write the user's financial data. Use them to make conversations productive and persistent.
+
+### When to use tools
+
+**Save memory** (\`save_memory\`) when the user shares concrete personal data:
+- Income, filing status, employer, state of residence
+- Account balances, holdings, contribution amounts
+- Family info (spouse, dependents, ages)
+- Financial decisions: "I'm going with a Roth conversion", "I chose the HSA-eligible plan"
+- Use confidence 0.9+ for explicitly stated facts, 0.7-0.9 for inferred
+- Use consistent snake_case keys: \`annual_income\`, \`filing_status\`, \`primary_state\`
+- Valid categories: ${VALID_CATEGORIES.join(", ")}
+
+**Read first, then respond** when the user asks about their situation:
+- "What are my goals?" → \`list_goals\` first, then summarize
+- "What do you know about me?" → \`list_memories\` first
+- Before asking the user for info, check \`list_memories\` to see if you already know it
+
+**Cross-pollinate** (\`save_signal\`) when conversation content is relevant to a goal:
+- Only for active goals — use \`list_goals\` to find them
+- Include \`extractedValues\` when you can map data to dashboard metrics
+- Include \`actionItems\` for concrete next steps
+- Include \`insights\` for recommendations, warnings, or opportunities
+
+**Complete actions** (\`complete_action_item\`) when user confirms doing something:
+- "I filed Form 8606" → find the matching action item and complete it
+- "I moved $7k into the Roth" → complete the contribution action
+- Use \`list_goals\` → \`get_goal\` to find the action item ID
+
+**Update dashboard** (\`update_dashboard\`) when specific metric values are mentioned:
+- Tax amounts, contribution figures, portfolio allocations
+- Must match existing dashboard attribute IDs from the goal's schema
+
+### When NOT to use tools
+
+- Simple conversational responses or general financial education
+- Hypothetical questions ("What if I earned $200k?" — don't save as fact)
+- Information the user hasn't confirmed (don't save your suggestions as their decisions)
+- Don't preemptively read all data — only what's relevant to the current question
+
+### Common patterns
+
+1. **User asks about goals**: \`list_goals\` → \`get_goal\` (for each relevant goal) → synthesize
+2. **User shares personal data**: respond naturally + \`save_memory\`
+3. **User confirms completing a task**: \`list_goals\` → \`get_goal\` → \`complete_action_item\`
+4. **User updates a number**: \`save_memory\` + \`update_dashboard\` (if it maps to a metric)`;
+
+  if (isGoalThread) {
+    instructions += `
+
+### Goal Thread Specifics
+
+You are in a goal thread. Be proactive about:
+- Saving signals to this goal when relevant information comes up
+- Updating dashboard metrics when the user provides specific numbers
+- Adding action items when you identify concrete next steps
+- Completing actions when the user confirms progress
+- Adding insights when you spot opportunities or risks`;
+  }
+
+  return instructions;
+}
+

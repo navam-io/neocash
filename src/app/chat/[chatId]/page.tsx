@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useSyncExternalStore, use } from "react";
 import { useChat } from "@ai-sdk/react";
-import { TextStreamChatTransport } from "ai";
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "@/context/AppContext";
 import { ChatMessages } from "@/components/chat/ChatMessages";
@@ -17,7 +17,6 @@ import {
   updateDocumentMetadata,
 } from "@/hooks/useDocumentStore";
 import {
-  listGoals,
   updateGoalStatus,
   toggleCrossPollination,
   setDashboardSchema,
@@ -27,12 +26,10 @@ import {
 } from "@/hooks/useGoalStore";
 import { listSignalsForGoal } from "@/hooks/useSignalStore";
 import { extractDocumentMetadata } from "@/lib/file-utils";
-import { processDetectedSignals } from "@/lib/signal-processing";
-import { processExtractedMemories } from "@/lib/memory-processing";
-import { processDetectedCompletions } from "@/lib/action-completion";
-import { prepareTextForSignalDetection } from "@/lib/signal-text";
 import { listAllMemories } from "@/hooks/useMemoryStore";
-import type { ChatRecord, DashboardSchema, GoalMeta, GoalStatus, MemoryRecord, SignalRecord } from "@/types";
+import { executeToolCall } from "@/lib/tool-executor";
+import { WRITE_TOOLS, MEMORY_TOOLS, GOAL_TOOLS, type ToolName } from "@/lib/tool-schemas";
+import type { DashboardSchema, GoalMeta, GoalStatus, MemoryRecord, SignalRecord } from "@/types";
 
 const mobileQuery = "(max-width: 767px)";
 const subscribe = (cb: () => void) => {
@@ -83,12 +80,44 @@ export default function ChatPage({
       }
     : baseBody;
 
-  const { messages, sendMessage, stop, setMessages, status } = useChat({
+  const { messages, sendMessage, stop, setMessages, status, addToolOutput } = useChat({
     id: chatId,
-    transport: new TextStreamChatTransport({
+    transport: new DefaultChatTransport({
       api: "/api/chat",
       body: transportBody,
     }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    onToolCall: async ({ toolCall }) => {
+      // Skip Anthropic built-in tools (web search) — handled by the provider
+      if ("dynamic" in toolCall && toolCall.dynamic) return;
+
+      try {
+        const result = await executeToolCall(
+          toolCall.toolName,
+          toolCall.input as Record<string, unknown>,
+          { chatId, messageId: "current" },
+        );
+        addToolOutput({
+          tool: toolCall.toolName,
+          toolCallId: toolCall.toolCallId,
+          output: result,
+        });
+      } catch (err) {
+        addToolOutput({
+          tool: toolCall.toolName,
+          toolCallId: toolCall.toolCallId,
+          state: "output-error",
+          errorText: String(err),
+        });
+      }
+
+      // Refresh sidebar lists after write operations
+      const name = toolCall.toolName as ToolName;
+      if (WRITE_TOOLS.has(name)) {
+        if (MEMORY_TOOLS.has(name)) refreshMemoryList();
+        if (GOAL_TOOLS.has(name)) refreshGoalList();
+      }
+    },
     onError: async (error) => {
       try {
         // Try to parse structured error from API response
@@ -134,197 +163,6 @@ export default function ChatPage({
         }
       } catch {
         // Non-critical — metadata extraction is best-effort
-      }
-
-      // Fetch active goals once — shared by signal detection + auto-completion
-      let allActiveGoals: ChatRecord[] = [];
-      try {
-        allActiveGoals = (await listGoals()).filter(
-          (g) => g.goal?.status === "active",
-        );
-      } catch {
-        // Non-critical — goals fetch is best-effort
-      }
-
-      // Signal detection: self-detection for goal threads, cross-pollination for regular chats
-      try {
-        const responseText =
-          message.parts
-            ?.filter(
-              (p): p is { type: "text"; text: string } => p.type === "text",
-            )
-            .map((p) => p.text)
-            .join("") || "";
-
-        if (responseText.length > 200) {
-          let goalSummaries: { id: string; title: string; description: string; category: string; dashboardSchema?: DashboardSchema; existingActionItems?: string[]; existingInsights?: string[] }[] = [];
-
-          if (goalMeta) {
-            // Self-detection: goal thread analyzes its own messages
-            if (goalMeta.status === "active") {
-              const chat = await getChat(chatId);
-              const activeActions = (goalMeta.actionItems || [])
-                .filter((a) => !a.completed)
-                .slice(0, 10)
-                .map((a) => a.text);
-              const activeInsights = (goalMeta.insights || [])
-                .filter((i) => !i.dismissedAt)
-                .slice(0, 10)
-                .map((i) => i.text);
-              goalSummaries = [{
-                id: chatId,
-                title: chat?.title || goalTitle,
-                description: goalMeta.description,
-                category: goalMeta.category || "",
-                dashboardSchema: goalMeta.dashboardSchema,
-                existingActionItems: activeActions.length > 0 ? activeActions : undefined,
-                existingInsights: activeInsights.length > 0 ? activeInsights : undefined,
-              }];
-            }
-          } else {
-            // Cross-pollination: non-goal chats feed signals into active goals
-            const pollinateGoals = allActiveGoals.filter(
-              (g) => g.goal?.crossPollinate,
-            );
-            goalSummaries = pollinateGoals.map((g) => {
-              const activeActions = (g.goal!.actionItems || [])
-                .filter((a) => !a.completed)
-                .slice(0, 10)
-                .map((a) => a.text);
-              const activeInsights = (g.goal!.insights || [])
-                .filter((i) => !i.dismissedAt)
-                .slice(0, 10)
-                .map((i) => i.text);
-              return {
-                id: g.id,
-                title: g.title,
-                description: g.goal!.description,
-                category: g.goal!.category || "",
-                dashboardSchema: g.goal!.dashboardSchema,
-                existingActionItems: activeActions.length > 0 ? activeActions : undefined,
-                existingInsights: activeInsights.length > 0 ? activeInsights : undefined,
-              };
-            });
-          }
-
-          if (goalSummaries.length > 0) {
-            const resp = await fetch("/api/detect-signals", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                responseText: prepareTextForSignalDetection(responseText),
-                goals: goalSummaries,
-              }),
-            });
-
-            if (resp.ok) {
-              const data = await resp.json();
-              if (data.signals?.length > 0) {
-                await processDetectedSignals(data.signals, chatId, message.id, refreshGoalList);
-              }
-            }
-          }
-        }
-      } catch {
-        // Non-critical — signal detection is best-effort
-      }
-
-      // Memory extraction: auto-extract profile facts and decisions
-      try {
-        const memResponseText =
-          message.parts
-            ?.filter(
-              (p): p is { type: "text"; text: string } => p.type === "text",
-            )
-            .map((p) => p.text)
-            .join("") || "";
-
-        if (memResponseText.length > 100) {
-          const existingSummary = memories.map((m) => ({
-            key: m.key,
-            value: m.value,
-            type: m.type,
-            category: m.category,
-          }));
-
-          const resp = await fetch("/api/extract-memories", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              responseText: memResponseText,
-              existingMemories: existingSummary,
-            }),
-          });
-
-          if (resp.ok) {
-            const data = await resp.json();
-            if (data.memories?.length > 0) {
-              await processExtractedMemories(
-                data.memories,
-                chatId,
-                message.id,
-                refreshMemoryList,
-              );
-            }
-          }
-        }
-      } catch {
-        // Non-critical — memory extraction is best-effort
-      }
-
-      // Auto-completion detection: check if any pending action items were completed
-      try {
-        const completionText =
-          message.parts
-            ?.filter(
-              (p): p is { type: "text"; text: string } => p.type === "text",
-            )
-            .map((p) => p.text)
-            .join("") || "";
-
-        if (completionText.length > 200 && allActiveGoals.length > 0) {
-          // Collect all pending actions across all active goals
-          const pendingActions: { id: string; goalId: string; text: string }[] = [];
-          const actionGoalMap = new Map<string, string>();
-
-          for (const goal of allActiveGoals) {
-            const items = goal.goal?.actionItems || [];
-            for (const item of items) {
-              if (!item.completed) {
-                pendingActions.push({
-                  id: item.id,
-                  goalId: goal.id,
-                  text: item.text,
-                });
-                actionGoalMap.set(item.id, goal.id);
-              }
-            }
-          }
-
-          if (pendingActions.length > 0) {
-            const resp = await fetch("/api/detect-completions", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                responseText: prepareTextForSignalDetection(completionText),
-                actions: pendingActions,
-              }),
-            });
-
-            if (resp.ok) {
-              const data = await resp.json();
-              if (data.completedIds?.length > 0) {
-                await processDetectedCompletions(data.completedIds, actionGoalMap);
-                refreshGoalList();
-                // Trigger animation for auto-completed items
-                setRecentlyCompleted(new Set(data.completedIds));
-                setTimeout(() => setRecentlyCompleted(new Set()), 2000);
-              }
-            }
-          }
-        }
-      } catch {
-        // Non-critical — auto-completion detection is best-effort
       }
     },
   });
