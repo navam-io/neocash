@@ -4,6 +4,17 @@ const DEFAULT_TOKEN_BUDGET = 160_000;
 const DEFAULT_RECENT_COUNT = 6;
 const CHARS_PER_TOKEN = 4;
 
+// Media types the Anthropic API accepts as file content blocks
+const SUPPORTED_FILE_TYPES = new Set([
+  // Images
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  // Documents
+  "application/pdf",
+]);
+
 interface WindowingOptions {
   tokenBudget?: number;
   recentCount?: number;
@@ -39,7 +50,7 @@ function estimateMessageTokens(message: UIMessage): number {
 }
 
 /**
- * Replace file parts in a message with text placeholders.
+ * Replace ALL file parts in a message with text placeholders.
  * Returns a shallow clone with file parts replaced.
  */
 function stripFileParts(message: UIMessage): UIMessage {
@@ -48,9 +59,35 @@ function stripFileParts(message: UIMessage): UIMessage {
 
   const newParts = message.parts!.map((part) => {
     if (part.type === "file") {
-      const filePart = part as { type: "file"; url: string; mediaType?: string };
-      const mediaType = filePart.mediaType || "document";
-      return { type: "text" as const, text: `[Previously uploaded: ${mediaType}]` };
+      const filePart = part as { type: "file"; url: string; mediaType?: string; filename?: string };
+      const name = filePart.filename || filePart.mediaType || "document";
+      return { type: "text" as const, text: `[Previously uploaded: ${name}]` };
+    }
+    return part;
+  });
+
+  return { ...message, parts: newParts };
+}
+
+/**
+ * Replace file parts with unsupported media types with text placeholders.
+ * Keeps images and PDFs (which the Anthropic API accepts), strips everything else.
+ */
+function stripUnsupportedFileParts(message: UIMessage): UIMessage {
+  const hasUnsupported = message.parts?.some((p) => {
+    if (p.type !== "file") return false;
+    const filePart = p as { type: "file"; mediaType?: string };
+    return !SUPPORTED_FILE_TYPES.has(filePart.mediaType || "");
+  });
+  if (!hasUnsupported) return message;
+
+  const newParts = message.parts!.map((part) => {
+    if (part.type === "file") {
+      const filePart = part as { type: "file"; url: string; mediaType?: string; filename?: string };
+      if (!SUPPORTED_FILE_TYPES.has(filePart.mediaType || "")) {
+        const name = filePart.filename || filePart.mediaType || "document";
+        return { type: "text" as const, text: `[Uploaded file: ${name}]` };
+      }
     }
     return part;
   });
@@ -77,18 +114,22 @@ export function prepareMessagesForAPI(
     return { messages: [], trimmed: false, estimatedTokens: 0 };
   }
 
-  // Split into old and recent
-  const splitIndex = Math.max(0, messages.length - recentCount);
-  const oldMessages = messages.slice(0, splitIndex);
-  const recentMessages = messages.slice(splitIndex);
+  // Step 0: Strip unsupported file types from ALL messages (DOCX, XLSX, etc.)
+  // The Anthropic API only accepts images and PDFs as file content blocks.
+  const sanitized = messages.map(stripUnsupportedFileParts);
 
-  // Step 1: Strip file parts from old messages
+  // Split into old and recent
+  const splitIndex = Math.max(0, sanitized.length - recentCount);
+  const oldMessages = sanitized.slice(0, splitIndex);
+  const recentMessages = sanitized.slice(splitIndex);
+
+  // Step 1: Strip remaining file parts (images/PDFs) from old messages
   const strippedOld = oldMessages.map(stripFileParts);
 
   // Calculate total tokens
   let combined = [...strippedOld, ...recentMessages];
   let totalTokens = combined.reduce((sum, m) => sum + estimateMessageTokens(m), 0);
-  let trimmed = strippedOld.length !== oldMessages.length ||
+  let trimmed = sanitized.some((m, i) => m !== messages[i]) ||
     strippedOld.some((m, i) => m !== oldMessages[i]);
 
   // Step 2: If still over budget, drop oldest messages (keep first user message)
