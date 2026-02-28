@@ -5,7 +5,7 @@
 <h1 align="center">NeoCash</h1>
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat" alt="MIT License" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache_2.0-22c55e?style=flat" alt="Apache 2.0 License" /></a>
   <img src="https://img.shields.io/badge/Next.js_16-000000?style=flat&logo=nextdotjs" alt="Next.js 16" />
   <img src="https://img.shields.io/badge/Claude_AI-c4704b?style=flat&logo=anthropic&logoColor=white" alt="Claude AI" />
   <img src="https://img.shields.io/badge/TypeScript-3178c6?style=flat&logo=typescript&logoColor=white" alt="TypeScript" />
@@ -150,4 +150,4 @@ Fork → branch → PR. Keep it local-first. No cloud dependencies.
 
 ## License
 
-[MIT](LICENSE)
+[Apache 2.0](LICENSE)
