@@ -377,10 +377,10 @@ describe("buildMemoryContext", () => {
     expect(result).toContain("(Lower tax bracket now)");
   });
 
-  it("includes instruction to use context naturally", () => {
+  it("includes instruction to use profile data directly", () => {
     const memories = [makeFact("income", "$100k", "income")];
     const result = buildMemoryContext(memories);
-    expect(result).toContain("Use this profile context naturally");
+    expect(result).toContain("Integrate this profile data into your advice");
   });
 
   it("falls back to most recent 5 decisions when no user message", () => {

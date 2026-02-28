@@ -44,10 +44,16 @@ export async function POST(req: Request) {
       systemPrompt += buildMemoryContext(memories, userText);
     }
 
+    // Append web search instruction so the model knows it can search
+    if (webSearch) {
+      systemPrompt += `\n\n## Web Search\n\nYou have access to real-time web search. Use it proactively to find current market data, news, stock prices, and other time-sensitive information when relevant to the user's question. Do not claim you lack internet access — you can search the web.`;
+    }
+
     const result = streamText({
       model: anthropic(model || "claude-sonnet-4-6"),
       system: systemPrompt,
       messages: await convertToModelMessages(windowedMessages),
+      ...(webSearch && { maxSteps: 5 }),
       ...(researchMode && {
         providerOptions: {
           anthropic: {

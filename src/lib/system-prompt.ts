@@ -156,7 +156,7 @@ export function buildMemoryContext(
   const facts = memories.filter((m) => m.type === "fact");
   const decisions = memories.filter((m) => m.type === "decision");
 
-  let context = "\n\n## User Profile (from previous conversations)\n\n";
+  let context = "\n\n## User's Personal Financial Profile\n\nThe following is the user's actual financial data that they have shared. Reference it when answering financial questions — especially portfolio positions, income, tax status, and key decisions.\n\n";
   let hasContent = false;
 
   // Facts: always included, grouped by category
@@ -208,6 +208,6 @@ export function buildMemoryContext(
 
   if (!hasContent) return "";
 
-  context += "\nUse this profile context naturally. Do not repeat it back unless asked.";
+  context += "\nIntegrate this profile data into your advice. When the user asks about their portfolio, holdings, or finances, use this data directly.";
   return context;
 }
