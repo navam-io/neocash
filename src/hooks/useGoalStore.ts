@@ -237,7 +237,7 @@ export async function scanGoalThreadForSignals(
 ): Promise<number> {
   try {
     const chat = await getChat(goalId);
-    if (!chat?.goal || !chat.goal.dashboardSchema?.length) return 0;
+    if (!chat?.goal) return 0;
 
     const assistantMessages = chat.messages.filter((m) => m.role === "assistant");
     if (assistantMessages.length === 0) return 0;

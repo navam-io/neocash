@@ -145,7 +145,7 @@ export default function ChatPage({
 
           if (goalMeta) {
             // Self-detection: goal thread analyzes its own messages
-            if (goalMeta.status === "active" && goalMeta.dashboardSchema?.length) {
+            if (goalMeta.status === "active") {
               const chat = await getChat(chatId);
               const activeActions = (goalMeta.actionItems || [])
                 .filter((a) => !a.completed)
@@ -237,13 +237,31 @@ export default function ChatPage({
           setGoalTitle(chat.title);
           const sigs = await listSignalsForGoal(chatId);
           setSignals(sigs);
-          // Retroactive self-scan: if goal has a dashboard but no signals yet,
-          // scan the thread's own messages to populate dashboard values
-          if (
-            sigs.length === 0 &&
-            chat.goal.dashboardSchema?.length &&
-            chat.messages.length > 0
-          ) {
+          // Auto-generate dashboard schema if missing, then retroactive scan
+          if (!chat.goal.dashboardSchema?.length) {
+            fetch("/api/generate-dashboard-schema", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: chat.title,
+                description: chat.goal.description,
+                category: chat.goal.category || undefined,
+              }),
+            })
+              .then((r) => r.json())
+              .then(async (data) => {
+                if (data.schema?.length > 0) {
+                  await setDashboardSchema(chatId, data.schema);
+                  refreshGoalList();
+                  if (chat.messages.length > 0) {
+                    const count = await scanGoalThreadForSignals(chatId);
+                    if (count > 0) refreshGoalList();
+                  }
+                }
+              })
+              .catch(() => {/* best-effort */});
+          } else if (sigs.length === 0 && chat.messages.length > 0) {
+            // Retroactive self-scan: dashboard exists but no signals yet
             scanGoalThreadForSignals(chatId).then((count) => {
               if (count > 0) refreshGoalList();
             });

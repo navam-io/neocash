@@ -9,7 +9,7 @@ import { ChatGreeting } from "@/components/chat/ChatGreeting";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { PromptCategories } from "@/components/chat/PromptCategories";
 import { createChat, saveChat } from "@/hooks/useChatHistory";
-import { createGoal, scanExistingChatsForSignals } from "@/hooks/useGoalStore";
+import { createGoal, setDashboardSchema, scanExistingChatsForSignals } from "@/hooks/useGoalStore";
 import { saveDocument } from "@/hooks/useDocumentStore";
 
 export default function NewChatPage() {
@@ -31,8 +31,21 @@ export default function NewChatPage() {
         setActiveChatId(id);
         refreshGoalList();
         refreshChatList();
-        // Fire-and-forget: scan existing chats for signals relevant to this new goal
-        scanExistingChatsForSignals(id, title, message).then(() => refreshGoalList());
+        // Fire-and-forget: generate schema first, then scan with schema available
+        fetch("/api/generate-dashboard-schema", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, description: message, category: undefined }),
+        })
+          .then((r) => r.json())
+          .then(async (data) => {
+            const schema = data.schema?.length > 0 ? data.schema : undefined;
+            if (schema) await setDashboardSchema(id, schema);
+            refreshGoalList();
+            return scanExistingChatsForSignals(id, title, message, undefined, schema);
+          })
+          .then(() => refreshGoalList())
+          .catch(() => {/* best-effort */});
         router.push(`/chat/${id}?message=${encodeURIComponent(message)}`);
         return;
       }
