@@ -173,6 +173,22 @@ Server-side text extraction for DOCX and XLSX uploads so Claude can reason about
 
 ---
 
+### Auto-Suggest Category & Mandatory Fields
+
+AI-powered category auto-suggestion and mandatory description/category for custom goal creation.
+
+- Generate button moved beside title field (out of textarea) for clearer UX
+- `/api/generate-goal-prompt` now returns JSON `{ prompt, suggestedCategory }` in one call
+- New `/api/suggest-category` endpoint — lightweight Haiku classifier triggered on description blur
+- Category auto-fills with sparkle icon when AI-suggested; user's manual pick always wins
+- Description and category now mandatory with validation hints on submit attempt
+- Markdown fence stripping for robust LLM JSON parsing
+- Exported `categoryIds` from `prompts.ts` for centralized validation across API routes
+
+**Commits:** `ed491a9` Add AI auto-suggest category and mandatory fields for custom goal creation
+
+---
+
 ## In Progress
 
 ### Signal Intelligence — [`intents/signal-intelligence.md`](intents/signal-intelligence.md)
@@ -201,6 +217,7 @@ Comprehensive upgrades to signal detection quality, goal thread self-awareness, 
 
 | SHA | Message |
 |-----|---------|
+| `ed491a9` | Add AI auto-suggest category and mandatory fields for custom goal creation |
 | `7058bd8` | Extract text from DOCX/XLSX uploads server-side for Claude reasoning |
 | `2fc2c76` | Strip unsupported file types (DOCX, XLSX) before sending to Anthropic API |
 | `6e5ab4b` | Fix context overflow, upgrade signal detection, add actionable dashboard |
