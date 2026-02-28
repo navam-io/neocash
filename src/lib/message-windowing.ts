@@ -1,4 +1,5 @@
 import type { UIMessage } from "ai";
+import { CONVERTIBLE_MIME_TYPES, extractFileText } from "./document-extraction";
 
 const DEFAULT_TOKEN_BUDGET = 160_000;
 const DEFAULT_RECENT_COUNT = 6;
@@ -70,10 +71,10 @@ function stripFileParts(message: UIMessage): UIMessage {
 }
 
 /**
- * Replace file parts with unsupported media types with text placeholders.
- * Keeps images and PDFs (which the Anthropic API accepts), strips everything else.
+ * Convert unsupported file parts: extract text from DOCX/XLSX,
+ * placeholder for other unsupported types. Images and PDFs pass through.
  */
-function stripUnsupportedFileParts(message: UIMessage): UIMessage {
+async function convertUnsupportedFileParts(message: UIMessage): Promise<UIMessage> {
   const hasUnsupported = message.parts?.some((p) => {
     if (p.type !== "file") return false;
     const filePart = p as { type: "file"; mediaType?: string };
@@ -81,16 +82,32 @@ function stripUnsupportedFileParts(message: UIMessage): UIMessage {
   });
   if (!hasUnsupported) return message;
 
-  const newParts = message.parts!.map((part) => {
-    if (part.type === "file") {
-      const filePart = part as { type: "file"; url: string; mediaType?: string; filename?: string };
-      if (!SUPPORTED_FILE_TYPES.has(filePart.mediaType || "")) {
-        const name = filePart.filename || filePart.mediaType || "document";
-        return { type: "text" as const, text: `[Uploaded file: ${name}]` };
+  const newParts = await Promise.all(
+    message.parts!.map(async (part) => {
+      if (part.type === "file") {
+        const filePart = part as { type: "file"; url: string; mediaType?: string; filename?: string };
+        if (!SUPPORTED_FILE_TYPES.has(filePart.mediaType || "")) {
+          const name = filePart.filename || filePart.mediaType || "document";
+
+          // Try text extraction for DOCX/XLSX
+          if (CONVERTIBLE_MIME_TYPES.has(filePart.mediaType || "")) {
+            const result = await extractFileText(filePart.url, filePart.mediaType || "");
+            if (result.success) {
+              const header = `--- Content from ${name} ---`;
+              const footer = `--- End of ${name} ---`;
+              return { type: "text" as const, text: `${header}\n${result.text}\n${footer}` };
+            }
+            // Extraction failed — include error reason
+            return { type: "text" as const, text: `[Uploaded file: ${name} (${result.error})]` };
+          }
+
+          // Other unsupported types — plain placeholder
+          return { type: "text" as const, text: `[Uploaded file: ${name}]` };
+        }
       }
-    }
-    return part;
-  });
+      return part;
+    }),
+  );
 
   return { ...message, parts: newParts };
 }
@@ -103,10 +120,10 @@ function stripUnsupportedFileParts(message: UIMessage): UIMessage {
  * 2. For older messages, replace file parts with text placeholders.
  * 3. If still over budget, drop oldest messages (but keep the first user message).
  */
-export function prepareMessagesForAPI(
+export async function prepareMessagesForAPI(
   messages: UIMessage[],
   options: WindowingOptions = {},
-): WindowingResult {
+): Promise<WindowingResult> {
   const budget = options.tokenBudget ?? DEFAULT_TOKEN_BUDGET;
   const recentCount = options.recentCount ?? DEFAULT_RECENT_COUNT;
 
@@ -114,9 +131,9 @@ export function prepareMessagesForAPI(
     return { messages: [], trimmed: false, estimatedTokens: 0 };
   }
 
-  // Step 0: Strip unsupported file types from ALL messages (DOCX, XLSX, etc.)
+  // Step 0: Convert unsupported file types (DOCX→text, XLSX→CSV) or placeholder.
   // The Anthropic API only accepts images and PDFs as file content blocks.
-  const sanitized = messages.map(stripUnsupportedFileParts);
+  const sanitized = await Promise.all(messages.map(convertUnsupportedFileParts));
 
   // Split into old and recent
   const splitIndex = Math.max(0, sanitized.length - recentCount);

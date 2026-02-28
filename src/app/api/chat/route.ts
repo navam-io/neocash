@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     const { messages, model, researchMode, webSearch, goalContext } = body;
 
     // Window messages to stay within context limits
-    const { messages: windowedMessages, trimmed } = prepareMessagesForAPI(messages);
+    const { messages: windowedMessages, trimmed } = await prepareMessagesForAPI(messages);
 
     if (trimmed) {
       console.log("[chat] Message windowing applied — older document content stripped");

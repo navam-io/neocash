@@ -14,13 +14,15 @@
     "ai": "^6.0.99",
     "idb-keyval": "^6.2.2",
     "lucide-react": "^0.575.0",
+    "mammoth": "^1.11.0",
     "nanoid": "^5.1.6",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
