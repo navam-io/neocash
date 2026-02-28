@@ -109,8 +109,6 @@ UX polish, signal quality improvements, and discoverability enhancements for Goa
 
 ---
 
-## Open
-
 ### Data Management — [`intents/data-management.md`](intents/data-management.md)
 
 Inline delete, full reset, and sample data loading for NeoCash.
@@ -123,12 +121,95 @@ Inline delete, full reset, and sample data loading for NeoCash.
 - Sample data: 3 chats, 2 goals, 3 signals, 3 documents (fictional, no PII)
 - Dynamic import for sample data module (kept out of main bundle)
 
+**Commits:** `6a16b62` Add data management — inline delete, reset, and sample data
+
+---
+
+### Goal Dashboard — [`intents/goal-dashboard.md`](intents/goal-dashboard.md)
+
+LLM-generated metric tracking for goal threads with structured dashboard panel.
+
+- Haiku analyzes goal title/description to generate 3-8 typed schema attributes (currency, percent, date, text, boolean, number)
+- Right-side detail panel (320px desktop, bottom sheet on mobile) with split-view layout
+- Type-appropriate formatting: currency via `Intl.NumberFormat`, dates in locale format, booleans as check/X icons
+- Empty attributes show "--" until a signal populates them
+- Completion indicator ("3 of 5 tracked") for at-a-glance progress
+- Inline schema editor: rename attributes, change types, add/remove (max 8)
+- Signal detection enhanced to extract typed `extractedValues` matching dashboard schema
+- System prompt sees current dashboard state (known/missing values) for proactive follow-up
+- Backward compatible: goals without schema show no Dashboard toggle
+
+**Commits:** `39c26db` Add goal dashboard — LLM-generated metric tracking · `d5cf134` Fix dashboard toggle wrapping
+
+---
+
+### Context Overflow — [`intents/context-overflow.md`](intents/context-overflow.md)
+
+Message windowing and error handling for conversations exceeding the ~200K token context window.
+
+- "Lossless-recent, lossy-old" message windowing with 160K token budget
+- Recent messages preserved with full file content; older messages get file parts replaced with placeholders
+- Token estimation at ~4 chars/token for text, base64 size calculation for files
+- Context overflow error detection from Anthropic SDK with structured error response (HTTP 413)
+- Dismissible amber warning banner above chat input
+- Error clears on next successful response
+
+**Commits:** `6e5ab4b` Fix context overflow, upgrade signal detection, add actionable dashboard
+
+---
+
+### Document Extraction — [`intents/document-extraction.md`](intents/document-extraction.md)
+
+Server-side text extraction for DOCX and XLSX uploads so Claude can reason about document contents.
+
+- `mammoth` (DOCX to text) and `xlsx`/SheetJS (XLSX to CSV) — pure JS, no native deps
+- Dynamic `await import()` keeps libraries server-only (no client bundle bloat)
+- 50,000 character truncation cap (~12,500 tokens)
+- Extracted text wrapped in `--- Content from filename ---` delimiters
+- Transparent to user — no UI changes, conversion happens in message-windowing layer
+- Builds on initial `stripUnsupportedFileParts()` fix that prevented silent API failures
+
+**Commits:** `2fc2c76` Strip unsupported file types before sending to API · `7058bd8` Extract text from DOCX/XLSX uploads server-side
+
+---
+
+## In Progress
+
+### Signal Intelligence — [`intents/signal-intelligence.md`](intents/signal-intelligence.md)
+
+Comprehensive upgrades to signal detection quality, goal thread self-awareness, smart text preparation, and chat verbosity control. Partially committed, partially staged.
+
+**Committed (part of `6e5ab4b`):**
+- Goal thread self-signal detection (threads detect signals from their own messages)
+- Retroactive self-scan on goal thread load for goals with dashboard schemas
+- Actionable dashboard: Action Items (checkable, prioritized) and Insights (typed, dismissible)
+- Signal detection model upgrade from Haiku to Sonnet for richer extraction
+- Shared `processDetectedSignals()` helper eliminating 3x code duplication
+
+**Uncommitted (staged changes):**
+- Smart signal text preparation: 15K char budget with head+tail windowing, financial-density scoring
+- Chat verbosity reduction: system prompt conciseness guidelines, conversational tone
+- Signal detection quality gates: max 3 actions + 2 insights, quality gate on concrete data
+- Deduplication context: existing items passed to API, few-shot examples in prompt
+- Model optimized to Haiku 4.5 for signal detection (down from Sonnet — cost effective)
+- Hard caps: 15 non-completed action items and 10 active insights per goal
+- Detection threshold raised from 50 to 200 characters
+
 ---
 
 ## Project Commits
 
 | SHA | Message |
 |-----|---------|
+| `7058bd8` | Extract text from DOCX/XLSX uploads server-side for Claude reasoning |
+| `2fc2c76` | Strip unsupported file types (DOCX, XLSX) before sending to Anthropic API |
+| `6e5ab4b` | Fix context overflow, upgrade signal detection, add actionable dashboard |
+| `d5cf134` | Fix dashboard toggle wrapping to second line in goal panel |
+| `39c26db` | Add goal dashboard — LLM-generated metric tracking for goal threads |
+| `6a16b62` | Add data management — inline delete, reset, and sample data |
+| `46c9b38` | Fix goals dropdown hover shake and preview text overflow |
+| `bac3940` | Fix: address code review findings for improve-goals feature |
+| `6619484` | Update changelog with improve-goals feature and implementation plan |
 | `e7d01d7` | Fix: address code review findings |
 | `f487dbd` | Hover-to-preview goal prompts in input box placeholder |
 | `9fd0e91` | Visual distinction between custom and predefined goals |
