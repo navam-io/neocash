@@ -174,8 +174,24 @@ function AssistantParts({ parts, streamActive }: { parts: MessagePart[]; streamA
     const part = parts[i];
 
     if (part.type === "text" && part.text) {
+      // Merge text parts so markdown structures (tables, lists) that span
+      // multiple parts render correctly. Skip over source-url and step-start
+      // parts which are non-visual and would otherwise break the merge chain.
+      const startIndex = i;
+      let merged = part.text;
+      while (i + 1 < parts.length) {
+        const next = parts[i + 1];
+        if (next.type === "text" && (next as { text: string }).text) {
+          i++;
+          merged += (next as { text: string }).text;
+        } else if (next.type === "source-url" || next.type === "step-start") {
+          i++; // skip non-visual parts between text chunks
+        } else {
+          break;
+        }
+      }
       elements.push(
-        <MarkdownRenderer key={`text-${i}`} content={part.text} />,
+        <MarkdownRenderer key={`text-${startIndex}`} content={merged} />,
       );
       i++;
     } else if (isToolOrDynamicToolUIPart(part)) {
