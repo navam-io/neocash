@@ -30,13 +30,13 @@ Prompt-routing architecture with 4 specialized financial agents (Tax Advisor, Po
 
 ---
 
-### Flatten Dashboard Schema
+### Flatten Dashboard Schema & Fix Specialist Tool Subsets
 
-Flattened `update_dashboard` tool schema to accept bare values instead of `{value: x}` wrappers, fixing intermittent Zod validation errors when the model sent `{hsa_contributed: 8550}` instead of `{hsa_contributed: {value: 8550}}`.
+Two tool-use fixes discovered during live testing of the specialized agents feature.
 
-- **Schema simplified**: `z.record(z.string(), z.object({value: ...}))` → `z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))`
-- **Executor updated**: reads bare values directly instead of unwrapping `.value`
-- Flatter schemas reduce LLM tool-use validation failures — models are biased toward simpler structures
+- **Schema flattened**: `update_dashboard` required `{value: x}` wrapper objects but the model sent bare values — simplified schema to `z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))` and updated executor to read bare values directly
+- **Goal thread tools added to all specialists**: Tax Advisor, Budget Planner, and Estate Planner were missing `update_dashboard`, `complete_action_item`, and `get_goal` — goal thread infrastructure tools needed by any specialist operating in a goal thread. All specialists now have 10+ tools (up from 7)
+- Flatter schemas and complete tool subsets reduce LLM tool-use errors in production
 
 ---
 
