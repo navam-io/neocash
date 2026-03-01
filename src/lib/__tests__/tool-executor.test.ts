@@ -254,7 +254,7 @@ describe("tool-executor", () => {
     it("converts values and delegates to updateDashboardValues", async () => {
       await executeToolCall("update_dashboard", {
         goalId: "g1",
-        values: { contrib_2024: { value: 7000 } },
+        values: { contrib_2024: 7000 },
       }, ctx);
 
       expect(mockUpdateDashboardValues).toHaveBeenCalledWith(

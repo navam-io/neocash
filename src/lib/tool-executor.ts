@@ -198,11 +198,11 @@ export async function executeToolCall(
 
     case "update_dashboard": {
       const goalId = input.goalId as string;
-      const rawValues = input.values as Record<string, { value: string | number | boolean }>;
+      const rawValues = input.values as Record<string, string | number | boolean>;
       const dashValues: DashboardValues = {};
       for (const [key, val] of Object.entries(rawValues)) {
         dashValues[key] = {
-          value: val.value,
+          value: val,
           updatedAt: Date.now(),
         };
       }

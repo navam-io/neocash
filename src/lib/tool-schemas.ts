@@ -138,11 +138,9 @@ export const updateDashboardTool = tool({
     values: z
       .record(
         z.string(),
-        z.object({
-          value: z.union([z.string(), z.number(), z.boolean()]),
-        }),
+        z.union([z.string(), z.number(), z.boolean()]),
       )
-      .describe("Dashboard values keyed by attribute ID"),
+      .describe("Dashboard values keyed by attribute ID, e.g. {hsa_contributed: 8550}"),
   }),
 });
 
