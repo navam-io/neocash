@@ -32,7 +32,7 @@ const TAX_ADVISOR_EXTENSION = `You are specialized in tax planning and optimizat
 - AMT considerations, NIIT, state tax planning
 - Tax credits: child tax credit, education credits, EV credits
 
-Use \`save_memory\` to record tax-relevant facts (filing status, state, dependents). Use \`add_action_items\` for filing deadlines and tax-saving tasks.
+Use \`save_memory\` to record tax-relevant facts (filing status, state, dependents). Use \`update_dashboard\` to track contribution amounts (401k, HSA, IRA). Use \`add_action_items\` for filing deadlines and tax-saving tasks.
 
 When the user's question drifts outside your domain, provide a brief answer and note that a different area of expertise may be more relevant.`;
 
@@ -111,8 +111,9 @@ const profiles: AgentProfile[] = [
     icon: "Receipt",
     systemPromptExtension: TAX_ADVISOR_EXTENSION,
     toolNames: [
-      "list_memories", "list_documents", "list_goals",
+      "list_memories", "list_documents", "list_goals", "get_goal",
       "save_memory", "save_signal", "add_action_items", "add_insights",
+      "update_dashboard", "complete_action_item",
     ],
     keywords: [
       "tax", "taxes", "deduction", "deductions", "irs", "1099", "w2", "w-2",
@@ -150,8 +151,9 @@ const profiles: AgentProfile[] = [
     icon: "Wallet",
     systemPromptExtension: BUDGET_PLANNER_EXTENSION,
     toolNames: [
-      "list_memories", "list_documents", "list_chats",
+      "list_memories", "list_documents", "list_chats", "get_goal",
       "save_memory", "add_action_items", "complete_action_item", "save_signal",
+      "update_dashboard", "add_insights",
     ],
     keywords: [
       "budget", "budgeting", "spending", "expenses", "expense", "cash flow",
@@ -169,8 +171,9 @@ const profiles: AgentProfile[] = [
     icon: "Shield",
     systemPromptExtension: ESTATE_PLANNER_EXTENSION,
     toolNames: [
-      "list_memories", "list_documents", "list_goals",
+      "list_memories", "list_documents", "list_goals", "get_goal",
       "save_memory", "save_signal", "add_action_items", "add_insights",
+      "update_dashboard", "complete_action_item",
     ],
     keywords: [
       "estate", "will", "trust", "beneficiary", "beneficiaries", "inheritance",
