@@ -8,10 +8,6 @@ Living tracker of feature intents and their implementation status.
 
 Evaluate Claude Agent SDK for multi-agent orchestration. Specialized financial agents (tax advisor, portfolio analyzer, budget planner, estate planner) with focused system prompts and tool subsets.
 
-### Eliminate Fire-and-Forget — [`intents/eliminate-fire-and-forget.md`](intents/eliminate-fire-and-forget.md)
-
-Replace 3 remaining hidden background processes with visible tool-driven equivalents: retroactive goal scan, goal thread self-scan, and dashboard schema generation.
-
 ### Memory Refactor — [`intents/memory-refactor.md`](intents/memory-refactor.md)
 
 Evaluate Claude's built-in memory capabilities as a potential replacement for the custom IndexedDB memory implementation.
@@ -19,6 +15,23 @@ Evaluate Claude's built-in memory capabilities as a potential replacement for th
 ---
 
 ## Implemented
+
+### Eliminate Fire-and-Forget — [`intents/eliminate-fire-and-forget.md`](intents/eliminate-fire-and-forget.md)
+
+Replace 3 hidden background AI processes with visible tool chips, completing the "every AI operation = visible" architecture.
+
+- **2 new tools** (`generate_dashboard`, `scan_chats_for_signals`) added to the 15-tool system (now 17 total, 11 write, 8 goal)
+- `generate_dashboard` calls `/api/generate-dashboard-schema` via fetch and saves schema to IndexedDB — visible as "Generating dashboard metrics..." → "Dashboard created" chip
+- `scan_chats_for_signals` iterates recent chats, calls `/api/detect-signals` per chat, processes found signals — visible as "Scanning conversations for signals..." → "Scanned conversations" chip
+- Removed `scanGoalThreadForSignals` entirely — circular self-scanning replaced by real-time `save_signal` tool calls
+- Removed `scanExistingChatsForSignals` from useGoalStore (now handled by tool executor)
+- Removed fire-and-forget chains from `GoalCreateForm`, `chat/new/page`, and `chat/[chatId]/page`
+- System prompt updated with goal creation patterns: model calls `generate_dashboard` then `scan_chats_for_signals` on first message
+- 8 new unit tests (161 total passing), ~130 lines of dead code deleted
+
+**Commits:** `088bec3` Convert fire-and-forget AI processes to visible tool chips
+
+---
 
 ### Markdown Table Fix
 
@@ -263,7 +276,7 @@ Comprehensive unit tests for all `src/lib/` pure functions.
 
 ### Multi-Agent Capabilities
 
-Chat-native multi-agent system replacing hidden fire-and-forget processing with 15 transparent, visible tool calls. The AI gains full read+write agency over all financial data with Claude-style collapsible chips in the conversation.
+Chat-native multi-agent system replacing hidden fire-and-forget processing with transparent, visible tool calls (15 initially, now 17 after Eliminate Fire-and-Forget). The AI gains full read+write agency over all financial data with Claude-style collapsible chips in the conversation.
 
 > Original brainstorm split into 3 focused intents for remaining aspirations:
 > [`intents/thinking-ui.md`](intents/thinking-ui.md) · [`intents/agent-sdk.md`](intents/agent-sdk.md) · [`intents/eliminate-fire-and-forget.md`](intents/eliminate-fire-and-forget.md)
@@ -357,6 +370,7 @@ Transform suggested prompts into a goals-first experience with comprehensive wea
 
 | SHA | Message |
 |-----|---------|
+| `088bec3` | Convert fire-and-forget AI processes to visible tool chips |
 | `c2fb1a6` | Fix error state for tool chips when stream fails mid-flight |
 | `5c63852` | Add thinking UI with adaptive budget for research mode |
 | `7e95fe2` | Split multi-agent brainstorm into 3 focused future intents |
