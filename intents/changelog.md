@@ -30,6 +30,16 @@ Prompt-routing architecture with 4 specialized financial agents (Tax Advisor, Po
 
 ---
 
+### Flatten Dashboard Schema
+
+Flattened `update_dashboard` tool schema to accept bare values instead of `{value: x}` wrappers, fixing intermittent Zod validation errors when the model sent `{hsa_contributed: 8550}` instead of `{hsa_contributed: {value: 8550}}`.
+
+- **Schema simplified**: `z.record(z.string(), z.object({value: ...}))` → `z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))`
+- **Executor updated**: reads bare values directly instead of unwrapping `.value`
+- Flatter schemas reduce LLM tool-use validation failures — models are biased toward simpler structures
+
+---
+
 ### Eliminate Fire-and-Forget — [`intents/eliminate-fire-and-forget.md`](intents/eliminate-fire-and-forget.md)
 
 Replace 3 hidden background AI processes with visible tool chips, completing the "every AI operation = visible" architecture.
