@@ -19,6 +19,8 @@ const {
   mockProcessExtractedMemories,
   mockProcessDetectedSignals,
   mockSetDashboardSchema,
+  mockCollectDataSnapshot,
+  mockApplyDiffs,
 } = vi.hoisted(() => ({
   mockListGoals: vi.fn(),
   mockListRegularChats: vi.fn(),
@@ -37,6 +39,8 @@ const {
   mockProcessExtractedMemories: vi.fn(),
   mockProcessDetectedSignals: vi.fn(),
   mockSetDashboardSchema: vi.fn(),
+  mockCollectDataSnapshot: vi.fn(),
+  mockApplyDiffs: vi.fn(),
 }));
 
 vi.mock("../../hooks/useGoalStore", () => ({
@@ -75,6 +79,11 @@ vi.mock("../memory-processing", () => ({
 
 vi.mock("../signal-processing", () => ({
   processDetectedSignals: mockProcessDetectedSignals,
+}));
+
+vi.mock("../agent-data", () => ({
+  collectDataSnapshot: mockCollectDataSnapshot,
+  applyDiffs: mockApplyDiffs,
 }));
 
 import { executeToolCall } from "../tool-executor";
@@ -421,6 +430,84 @@ describe("tool-executor", () => {
       expect(result.scanned).toBe(1);
       expect(result.signalsFound).toBe(0);
       // fetch should NOT have been called since text was too short
+    });
+  });
+
+  describe("run_background_agent", () => {
+    it("collects snapshot, calls API, and applies diffs", async () => {
+      const mockSnapshot = { goals: [], memories: [], signals: [], documents: [], chats: [] };
+      mockCollectDataSnapshot.mockResolvedValue(mockSnapshot);
+
+      const mockDiffs = {
+        goals: { created: [], updated: [{ id: "g1", goal: { insights: [{ text: "test" }] } }], deleted: [] },
+        memories: { created: [], updated: [], deleted: [] },
+        signals: { created: [{ id: "s1" }], updated: [], deleted: [] },
+      };
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          diffs: mockDiffs,
+          summary: "Analysis complete: found 3 optimization opportunities.",
+          changeCount: 2,
+        }),
+      });
+
+      mockApplyDiffs.mockResolvedValue(undefined);
+
+      const result = await executeToolCall("run_background_agent", {
+        task: "financial_health_check",
+      }, ctx) as Record<string, unknown>;
+
+      expect(mockCollectDataSnapshot).toHaveBeenCalled();
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "/api/background-agent",
+        expect.objectContaining({ method: "POST" }),
+      );
+      expect(mockApplyDiffs).toHaveBeenCalledWith(mockDiffs);
+      expect(result.completed).toBe(true);
+      expect(result.task).toBe("financial_health_check");
+      expect(result.summary).toContain("optimization opportunities");
+      expect(result.changeCount).toBe(2);
+    });
+
+    it("passes goalIds to API when provided", async () => {
+      mockCollectDataSnapshot.mockResolvedValue({ goals: [], memories: [], signals: [], documents: [], chats: [] });
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          diffs: { goals: { created: [], updated: [], deleted: [] }, memories: { created: [], updated: [], deleted: [] }, signals: { created: [], updated: [], deleted: [] } },
+          summary: "Done",
+          changeCount: 0,
+        }),
+      });
+      mockApplyDiffs.mockResolvedValue(undefined);
+
+      await executeToolCall("run_background_agent", {
+        task: "tax_review",
+        goalIds: ["g1", "g2"],
+      }, ctx);
+
+      const fetchCall = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const body = JSON.parse(fetchCall[1].body);
+      expect(body.task).toBe("tax_review");
+      expect(body.goalIds).toEqual(["g1", "g2"]);
+    });
+
+    it("returns error on API failure", async () => {
+      mockCollectDataSnapshot.mockResolvedValue({ goals: [], memories: [], signals: [], documents: [], chats: [] });
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        statusText: "Internal Server Error",
+        json: () => Promise.resolve({ error: "Agent crashed" }),
+      });
+
+      const result = await executeToolCall("run_background_agent", {
+        task: "portfolio_analysis",
+      }, ctx) as Record<string, unknown>;
+
+      expect(result.error).toContain("Background agent failed");
+      expect(mockApplyDiffs).not.toHaveBeenCalled();
     });
   });
 

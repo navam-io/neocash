@@ -91,6 +91,7 @@ const ALL_WRITE_TOOLS: ToolName[] = [
   "save_signal", "update_dashboard", "add_action_items",
   "complete_action_item", "add_insights", "update_goal_status",
   "generate_dashboard", "scan_chats_for_signals",
+  "run_background_agent",
 ];
 
 const profiles: AgentProfile[] = [
@@ -113,7 +114,7 @@ const profiles: AgentProfile[] = [
     toolNames: [
       "list_memories", "list_documents", "list_goals", "get_goal",
       "save_memory", "save_signal", "add_action_items", "add_insights",
-      "update_dashboard", "complete_action_item",
+      "update_dashboard", "complete_action_item", "run_background_agent",
     ],
     keywords: [
       "tax", "taxes", "deduction", "deductions", "irs", "1099", "w2", "w-2",
@@ -133,6 +134,7 @@ const profiles: AgentProfile[] = [
     toolNames: [
       "list_memories", "list_goals", "list_signals", "get_goal",
       "save_memory", "save_signal", "update_dashboard", "add_insights",
+      "run_background_agent",
     ],
     keywords: [
       "portfolio", "allocation", "rebalance", "rebalancing", "diversify",
@@ -153,7 +155,7 @@ const profiles: AgentProfile[] = [
     toolNames: [
       "list_memories", "list_documents", "list_chats", "get_goal",
       "save_memory", "add_action_items", "complete_action_item", "save_signal",
-      "update_dashboard", "add_insights",
+      "update_dashboard", "add_insights", "run_background_agent",
     ],
     keywords: [
       "budget", "budgeting", "spending", "expenses", "expense", "cash flow",
@@ -173,7 +175,7 @@ const profiles: AgentProfile[] = [
     toolNames: [
       "list_memories", "list_documents", "list_goals", "get_goal",
       "save_memory", "save_signal", "add_action_items", "add_insights",
-      "update_dashboard", "complete_action_item",
+      "update_dashboard", "complete_action_item", "run_background_agent",
     ],
     keywords: [
       "estate", "will", "trust", "beneficiary", "beneficiaries", "inheritance",

@@ -13,6 +13,8 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.47",
     "@ai-sdk/react": "^3.0.101",
+    "@anthropic-ai/claude-agent-sdk": "^0.2.63",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "ai": "^6.0.99",
     "idb-keyval": "^6.2.2",
     "lucide-react": "^0.575.0",

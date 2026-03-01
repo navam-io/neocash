@@ -13,6 +13,7 @@ import {
   ArrowUpDown,
   Globe,
   Search,
+  BotMessageSquare,
   type LucideIcon,
 } from "lucide-react";
 import type { ToolName } from "@/lib/tool-schemas";
@@ -143,6 +144,13 @@ const toolLabels: Record<ToolName, ToolLabel> = {
     activeLabel: "Scanning conversations for signals...",
     doneLabel: "Scanned conversations",
     icon: Search,
+    category: "write",
+  },
+  run_background_agent: {
+    label: "Deep analysis",
+    activeLabel: "Running deep analysis...",
+    doneLabel: "Analysis complete",
+    icon: BotMessageSquare,
     category: "write",
   },
 };

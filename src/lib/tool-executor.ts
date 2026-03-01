@@ -21,6 +21,8 @@ import {
 import { listDocuments } from "@/hooks/useDocumentStore";
 import { processExtractedMemories } from "@/lib/memory-processing";
 import { processDetectedSignals } from "@/lib/signal-processing";
+import { collectDataSnapshot, applyDiffs } from "@/lib/agent-data";
+import type { AgentDataDiff } from "@/lib/agent-data";
 import type { ToolName } from "@/lib/tool-schemas";
 import type { DashboardValues, GoalStatus } from "@/types";
 
@@ -324,6 +326,50 @@ export async function executeToolCall(
         scanned: recentChats.length,
         signalsFound: totalSignals,
         summaries: signalSummaries,
+      };
+    }
+
+    case "run_background_agent": {
+      const task = input.task as string;
+      const goalIds = input.goalIds as string[] | undefined;
+
+      // Collect full data snapshot from IndexedDB stores
+      const snapshot = await collectDataSnapshot();
+
+      // POST to background-agent API
+      const resp = await fetch("/api/background-agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task, dataSnapshot: snapshot, goalIds }),
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        return {
+          error: `Background agent failed: ${(errData as { error?: string }).error || resp.statusText}`,
+        };
+      }
+
+      const { diffs, summary, changeCount } = (await resp.json()) as {
+        diffs: AgentDataDiff;
+        summary: string;
+        changeCount: number;
+      };
+
+      // Apply diffs to IndexedDB
+      await applyDiffs(diffs);
+
+      return {
+        completed: true,
+        task,
+        summary,
+        changeCount,
+        goalUpdates: diffs.goals.updated.length,
+        newInsights: diffs.goals.updated.reduce(
+          (acc, g) => acc + (g.goal.insights?.length ?? 0),
+          0,
+        ),
+        newSignals: diffs.signals.created.length,
       };
     }
 

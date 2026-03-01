@@ -3,8 +3,8 @@ import { allTools, WRITE_TOOLS, MEMORY_TOOLS, GOAL_TOOLS, type ToolName } from "
 describe("tool-schemas", () => {
   const toolNames = Object.keys(allTools) as ToolName[];
 
-  it("exports 17 tools", () => {
-    expect(toolNames).toHaveLength(17);
+  it("exports 18 tools", () => {
+    expect(toolNames).toHaveLength(18);
   });
 
   it("every tool has a description", () => {
@@ -45,8 +45,8 @@ describe("tool-schemas", () => {
   });
 
   describe("WRITE tools", () => {
-    it("contains 11 write tools", () => {
-      expect(WRITE_TOOLS.size).toBe(11);
+    it("contains 12 write tools", () => {
+      expect(WRITE_TOOLS.size).toBe(12);
     });
 
     it("all write tools exist in allTools", () => {

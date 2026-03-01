@@ -216,6 +216,22 @@ export const scanChatsForSignalsTool = tool({
   }),
 });
 
+export const runBackgroundAgentTool = tool({
+  description:
+    "Launch a background agent for deep, multi-step financial analysis. The agent autonomously delegates to specialist sub-agents (tax, portfolio, budget, estate) and updates goal dashboards, action items, and insights. Use when the user asks for comprehensive analysis, multi-goal reports, cross-domain reviews, or deep financial assessments that require consulting multiple data sources.",
+  inputSchema: z.object({
+    task: z.enum([
+      "financial_health_check",
+      "tax_review",
+      "portfolio_analysis",
+      "budget_optimization",
+      "estate_review",
+      "cross_goal_report",
+    ]).describe("The type of deep analysis to perform"),
+    goalIds: z.array(z.string()).optional().describe("Specific goal IDs to focus on (optional — analyzes all if omitted)"),
+  }),
+});
+
 // ─── Export all tools ────────────────────────────
 
 export const allTools = {
@@ -236,6 +252,7 @@ export const allTools = {
   update_goal_status: updateGoalStatusTool,
   generate_dashboard: generateDashboardTool,
   scan_chats_for_signals: scanChatsForSignalsTool,
+  run_background_agent: runBackgroundAgentTool,
 };
 
 export type ToolName = keyof typeof allTools;
@@ -252,6 +269,7 @@ export const WRITE_TOOLS = new Set<ToolName>([
   "update_goal_status",
   "generate_dashboard",
   "scan_chats_for_signals",
+  "run_background_agent",
 ]);
 
 export const MEMORY_TOOLS = new Set<ToolName>([

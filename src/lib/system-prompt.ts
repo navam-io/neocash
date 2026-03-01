@@ -271,7 +271,14 @@ You have tools to read and write the user's financial data. Use them to make con
 3. **User confirms completing a task**: \`list_goals\` → \`get_goal\` → \`complete_action_item\`
 4. **User updates a number**: \`save_memory\` + \`update_dashboard\` (if it maps to a metric)
 5. **Goal just created** (first message in a goal thread): call \`generate_dashboard\` first, then \`scan_chats_for_signals\` to find relevant data from past conversations, then respond to the user
-6. **Goal thread has no dashboard** (missing schema on an older goal): call \`generate_dashboard\` before proceeding with your response`;
+6. **Goal thread has no dashboard** (missing schema on an older goal): call \`generate_dashboard\` before proceeding with your response
+7. **Deep analysis requested**: call \`run_background_agent\` when the user asks for comprehensive analysis, multi-goal reports, cross-domain reviews, or financial health checks. Choose the task type that best matches:
+   - \`financial_health_check\` — comprehensive review across all domains (tax, investing, budget, estate)
+   - \`tax_review\` — deep tax analysis with deduction/credit optimization
+   - \`portfolio_analysis\` — investment allocation, rebalancing, risk assessment
+   - \`budget_optimization\` — spending analysis, savings rate, debt strategy
+   - \`estate_review\` — estate plan completeness check
+   - \`cross_goal_report\` — how goals interact, conflict, or complement each other`;
 
   if (isGoalThread) {
     instructions += `
