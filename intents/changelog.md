@@ -2,6 +2,26 @@
 
 Living tracker of feature intents and their implementation status.
 
+## Future
+
+### Thinking UI — [`intents/thinking-ui.md`](intents/thinking-ui.md)
+
+Render extended thinking and reasoning parts to the user. Show thinking indicators during streaming, collapsible reasoning blocks, and adaptive thinking budget based on query complexity.
+
+### Agent SDK — [`intents/agent-sdk.md`](intents/agent-sdk.md)
+
+Evaluate Claude Agent SDK for multi-agent orchestration. Specialized financial agents (tax advisor, portfolio analyzer, budget planner, estate planner) with focused system prompts and tool subsets.
+
+### Eliminate Fire-and-Forget — [`intents/eliminate-fire-and-forget.md`](intents/eliminate-fire-and-forget.md)
+
+Replace 3 remaining hidden background processes with visible tool-driven equivalents: retroactive goal scan, goal thread self-scan, and dashboard schema generation.
+
+### Memory Refactor — [`intents/memory-refactor.md`](intents/memory-refactor.md)
+
+Evaluate Claude's built-in memory capabilities as a potential replacement for the custom IndexedDB memory implementation.
+
+---
+
 ## Implemented
 
 ### Project Foundation — [`intents/claude-clone.md`](intents/claude-clone.md)
@@ -216,9 +236,12 @@ Comprehensive unit tests for all `src/lib/` pure functions.
 
 ---
 
-### Multi-Agent Capabilities — [`intents/multi-agent-capabilities.md`](intents/multi-agent-capabilities.md)
+### Multi-Agent Capabilities
 
 Chat-native multi-agent system replacing hidden fire-and-forget processing with 15 transparent, visible tool calls. The AI gains full read+write agency over all financial data with Claude-style collapsible chips in the conversation.
+
+> Original brainstorm split into 3 focused intents for remaining aspirations:
+> [`intents/thinking-ui.md`](intents/thinking-ui.md) · [`intents/agent-sdk.md`](intents/agent-sdk.md) · [`intents/eliminate-fire-and-forget.md`](intents/eliminate-fire-and-forget.md)
 
 - **Transport switch**: `TextStreamChatTransport` → `DefaultChatTransport` with UI message protocol supporting tool-call parts
 - **15 tool schemas** (6 read, 9 write) defined with `tool()` from AI SDK + Zod — schema-only on server, client-side execution via IndexedDB stores
@@ -309,6 +332,8 @@ Transform suggested prompts into a goals-first experience with comprehensive wea
 
 | SHA | Message |
 |-----|---------|
+| `2e7ce6f` | Link auto-actions intent to changelog and add progress bar detail |
+| `d021cdd` | Sync changelog with git history and add missing intent files |
 | `2c63bad` | Enable web search source citations and tool label |
 | `67bb4c7` | Update changelog with multi-agent capabilities, auto-completion, and test suite |
 | `f68e091` | Add chat-native multi-agent capabilities with 15 financial tools |
