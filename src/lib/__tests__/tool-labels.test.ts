@@ -30,13 +30,29 @@ describe("tool-labels", () => {
       expect(label.category).toBe("read");
     });
 
+    it("returns correct label for generate_dashboard", () => {
+      const label = getToolLabel("generate_dashboard");
+      expect(label.label).toContain("dashboard");
+      expect(label.activeLabel).toContain("dashboard");
+      expect(label.doneLabel).toContain("Dashboard");
+      expect(label.category).toBe("write");
+    });
+
+    it("returns correct label for scan_chats_for_signals", () => {
+      const label = getToolLabel("scan_chats_for_signals");
+      expect(label.label).toContain("conversations");
+      expect(label.activeLabel).toContain("Scanning");
+      expect(label.doneLabel).toContain("Scanned");
+      expect(label.category).toBe("write");
+    });
+
     it("returns an icon component for every known tool", () => {
       const tools = [
         "list_goals", "get_goal", "list_signals", "list_memories",
         "list_documents", "list_chats", "save_memory", "update_memory",
         "delete_memory", "save_signal", "update_dashboard",
         "add_action_items", "complete_action_item", "add_insights",
-        "update_goal_status",
+        "update_goal_status", "generate_dashboard", "scan_chats_for_signals",
       ];
       for (const name of tools) {
         const label = getToolLabel(name);
@@ -58,6 +74,8 @@ describe("tool-labels", () => {
       expect(isWriteTool("complete_action_item")).toBe(true);
       expect(isWriteTool("add_insights")).toBe(true);
       expect(isWriteTool("update_goal_status")).toBe(true);
+      expect(isWriteTool("generate_dashboard")).toBe(true);
+      expect(isWriteTool("scan_chats_for_signals")).toBe(true);
     });
 
     it("returns false for read tools", () => {

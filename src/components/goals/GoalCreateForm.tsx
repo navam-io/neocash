@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { nanoid } from "nanoid";
 import { Sparkles, Loader2 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { createGoal, setDashboardSchema, scanExistingChatsForSignals } from "@/hooks/useGoalStore";
+import { createGoal } from "@/hooks/useGoalStore";
 import { promptCategories, resolvePromptYears } from "@/lib/prompts";
 
 interface GoalCreateFormProps {
@@ -116,22 +116,6 @@ export function GoalCreateForm({ onClose }: GoalCreateFormProps) {
       setActiveChatId(id);
       refreshGoalList();
       refreshChatList();
-      // Fire-and-forget: generate schema first, then scan with schema available
-      fetch("/api/generate-dashboard-schema", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: trimmedTitle, description: goalDescription, category: category || undefined }),
-      })
-        .then((r) => r.json())
-        .then(async (data) => {
-          const schema = data.schema?.length > 0 ? data.schema : undefined;
-          if (schema) await setDashboardSchema(id, schema);
-          refreshGoalList();
-          // Now scan existing chats with the schema available
-          return scanExistingChatsForSignals(id, trimmedTitle, goalDescription, category || undefined, schema);
-        })
-        .then(() => refreshGoalList())
-        .catch(() => {/* best-effort */});
       const kickoff = goalDescription;
       router.push(`/chat/${id}?message=${encodeURIComponent(kickoff)}`);
       onClose();

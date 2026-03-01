@@ -3,8 +3,8 @@ import { allTools, WRITE_TOOLS, MEMORY_TOOLS, GOAL_TOOLS, type ToolName } from "
 describe("tool-schemas", () => {
   const toolNames = Object.keys(allTools) as ToolName[];
 
-  it("exports 15 tools", () => {
-    expect(toolNames).toHaveLength(15);
+  it("exports 17 tools", () => {
+    expect(toolNames).toHaveLength(17);
   });
 
   it("every tool has a description", () => {
@@ -45,8 +45,8 @@ describe("tool-schemas", () => {
   });
 
   describe("WRITE tools", () => {
-    it("contains 9 write tools", () => {
-      expect(WRITE_TOOLS.size).toBe(9);
+    it("contains 11 write tools", () => {
+      expect(WRITE_TOOLS.size).toBe(11);
     });
 
     it("all write tools exist in allTools", () => {
@@ -79,7 +79,9 @@ describe("tool-schemas", () => {
       expect(GOAL_TOOLS.has("complete_action_item")).toBe(true);
       expect(GOAL_TOOLS.has("add_insights")).toBe(true);
       expect(GOAL_TOOLS.has("update_goal_status")).toBe(true);
-      expect(GOAL_TOOLS.size).toBe(6);
+      expect(GOAL_TOOLS.has("generate_dashboard")).toBe(true);
+      expect(GOAL_TOOLS.has("scan_chats_for_signals")).toBe(true);
+      expect(GOAL_TOOLS.size).toBe(8);
     });
 
     it("is a subset of WRITE_TOOLS", () => {

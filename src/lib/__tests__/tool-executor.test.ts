@@ -18,6 +18,7 @@ const {
   mockListDocuments,
   mockProcessExtractedMemories,
   mockProcessDetectedSignals,
+  mockSetDashboardSchema,
 } = vi.hoisted(() => ({
   mockListGoals: vi.fn(),
   mockListRegularChats: vi.fn(),
@@ -35,6 +36,7 @@ const {
   mockListDocuments: vi.fn(),
   mockProcessExtractedMemories: vi.fn(),
   mockProcessDetectedSignals: vi.fn(),
+  mockSetDashboardSchema: vi.fn(),
 }));
 
 vi.mock("../../hooks/useGoalStore", () => ({
@@ -45,6 +47,7 @@ vi.mock("../../hooks/useGoalStore", () => ({
   addActionItems: mockAddActionItems,
   toggleActionItem: mockToggleActionItem,
   addInsights: mockAddInsights,
+  setDashboardSchema: mockSetDashboardSchema,
 }));
 
 vi.mock("../../hooks/useSignalStore", () => ({
@@ -291,6 +294,133 @@ describe("tool-executor", () => {
       }, ctx);
 
       expect(mockUpdateGoalStatus).toHaveBeenCalledWith("g1", "active", undefined);
+    });
+  });
+
+  describe("generate_dashboard", () => {
+    it("calls API and saves schema on success", async () => {
+      const mockSchema = [
+        { id: "total_income", name: "Total Income", type: "currency" },
+        { id: "tax_rate", name: "Tax Rate", type: "percent" },
+      ];
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ schema: mockSchema }),
+      });
+
+      const result = await executeToolCall("generate_dashboard", {
+        goalId: "g1",
+        title: "Tax Goal",
+        description: "Reduce taxes",
+        category: "tax",
+      }, ctx) as Record<string, unknown>;
+
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "/api/generate-dashboard-schema",
+        expect.objectContaining({ method: "POST" }),
+      );
+      expect(mockSetDashboardSchema).toHaveBeenCalledWith("g1", mockSchema);
+      expect(result.generated).toBe(true);
+      expect(result.attributes).toHaveLength(2);
+    });
+
+    it("returns error on API failure", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({ ok: false });
+
+      const result = await executeToolCall("generate_dashboard", {
+        goalId: "g1",
+        title: "Tax Goal",
+        description: "Reduce taxes",
+      }, ctx) as Record<string, unknown>;
+
+      expect(result.error).toContain("Failed");
+      expect(mockSetDashboardSchema).not.toHaveBeenCalled();
+    });
+
+    it("handles empty schema response", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ schema: [] }),
+      });
+
+      const result = await executeToolCall("generate_dashboard", {
+        goalId: "g1",
+        title: "Tax Goal",
+        description: "Reduce taxes",
+      }, ctx) as Record<string, unknown>;
+
+      expect(result.generated).toBe(false);
+      expect(mockSetDashboardSchema).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("scan_chats_for_signals", () => {
+    it("scans recent chats and returns signal summary", async () => {
+      mockListRegularChats.mockResolvedValue([
+        {
+          id: "chat-a",
+          messages: [
+            {
+              id: "m1",
+              role: "assistant",
+              parts: [{ type: "text", text: "You should consider tax-loss harvesting on your portfolio." }],
+            },
+          ],
+        },
+      ]);
+      mockProcessDetectedSignals.mockResolvedValue(1);
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          signals: [{ goalId: "g1", summary: "Tax-loss harvesting opportunity", category: "tax_insight" }],
+        }),
+      });
+
+      const result = await executeToolCall("scan_chats_for_signals", {
+        goalId: "g1",
+        title: "Tax Goal",
+        description: "Reduce taxes",
+        category: "tax",
+      }, ctx) as Record<string, unknown>;
+
+      expect(result.scanned).toBe(1);
+      expect(result.signalsFound).toBe(1);
+      expect((result.summaries as string[])).toContain("Tax-loss harvesting opportunity");
+    });
+
+    it("handles no chats gracefully", async () => {
+      mockListRegularChats.mockResolvedValue([]);
+
+      const result = await executeToolCall("scan_chats_for_signals", {
+        goalId: "g1",
+        title: "Tax Goal",
+        description: "Reduce taxes",
+      }, ctx) as Record<string, unknown>;
+
+      expect(result.scanned).toBe(0);
+      expect(result.signalsFound).toBe(0);
+    });
+
+    it("skips chats with only short assistant messages", async () => {
+      mockListRegularChats.mockResolvedValue([
+        {
+          id: "chat-a",
+          messages: [
+            { id: "m1", role: "assistant", parts: [{ type: "text", text: "Hi" }] },
+          ],
+        },
+      ]);
+
+      const result = await executeToolCall("scan_chats_for_signals", {
+        goalId: "g1",
+        title: "Tax Goal",
+        description: "Reduce taxes",
+      }, ctx) as Record<string, unknown>;
+
+      expect(result.scanned).toBe(1);
+      expect(result.signalsFound).toBe(0);
+      // fetch should NOT have been called since text was too short
     });
   });
 

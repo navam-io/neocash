@@ -267,7 +267,9 @@ You have tools to read and write the user's financial data. Use them to make con
 1. **User asks about goals**: \`list_goals\` → \`get_goal\` (for each relevant goal) → synthesize
 2. **User shares personal data**: respond naturally + \`save_memory\`
 3. **User confirms completing a task**: \`list_goals\` → \`get_goal\` → \`complete_action_item\`
-4. **User updates a number**: \`save_memory\` + \`update_dashboard\` (if it maps to a metric)`;
+4. **User updates a number**: \`save_memory\` + \`update_dashboard\` (if it maps to a metric)
+5. **Goal just created** (first message in a goal thread): call \`generate_dashboard\` first, then \`scan_chats_for_signals\` to find relevant data from past conversations, then respond to the user
+6. **Goal thread has no dashboard** (missing schema on an older goal): call \`generate_dashboard\` before proceeding with your response`;
 
   if (isGoalThread) {
     instructions += `
@@ -279,7 +281,9 @@ You are in a goal thread. Be proactive about:
 - Updating dashboard metrics when the user provides specific numbers
 - Adding action items when you identify concrete next steps
 - Completing actions when the user confirms progress
-- Adding insights when you spot opportunities or risks`;
+- Adding insights when you spot opportunities or risks
+- If this is the first message (goal just created), call \`generate_dashboard\` with the goal's title, description, and category, then call \`scan_chats_for_signals\` to find relevant data from past conversations
+- If the goal has no dashboard schema, call \`generate_dashboard\` before proceeding`;
   }
 
   return instructions;

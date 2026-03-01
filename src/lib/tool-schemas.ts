@@ -196,6 +196,28 @@ export const updateGoalStatusTool = tool({
   }),
 });
 
+export const generateDashboardTool = tool({
+  description:
+    "Generate a dashboard schema for a goal. Call this after creating a goal to set up its tracking metrics, or when a goal thread has no dashboard yet.",
+  inputSchema: z.object({
+    goalId: z.string().describe("The goal ID to generate a dashboard for"),
+    title: z.string().describe("Goal title"),
+    description: z.string().describe("Goal description"),
+    category: z.string().optional().describe("Goal category"),
+  }),
+});
+
+export const scanChatsForSignalsTool = tool({
+  description:
+    "Scan recent conversations for signals relevant to a goal. Call this after creating a goal to find existing data in past chats that relates to the new goal.",
+  inputSchema: z.object({
+    goalId: z.string().describe("The goal ID to scan signals for"),
+    title: z.string().describe("Goal title"),
+    description: z.string().describe("Goal description"),
+    category: z.string().optional().describe("Goal category"),
+  }),
+});
+
 // ─── Export all tools ────────────────────────────
 
 export const allTools = {
@@ -214,6 +236,8 @@ export const allTools = {
   complete_action_item: completeActionItemTool,
   add_insights: addInsightsTool,
   update_goal_status: updateGoalStatusTool,
+  generate_dashboard: generateDashboardTool,
+  scan_chats_for_signals: scanChatsForSignalsTool,
 };
 
 export type ToolName = keyof typeof allTools;
@@ -228,6 +252,8 @@ export const WRITE_TOOLS = new Set<ToolName>([
   "complete_action_item",
   "add_insights",
   "update_goal_status",
+  "generate_dashboard",
+  "scan_chats_for_signals",
 ]);
 
 export const MEMORY_TOOLS = new Set<ToolName>([
@@ -243,4 +269,6 @@ export const GOAL_TOOLS = new Set<ToolName>([
   "complete_action_item",
   "add_insights",
   "update_goal_status",
+  "generate_dashboard",
+  "scan_chats_for_signals",
 ]);

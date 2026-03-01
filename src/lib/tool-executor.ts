@@ -9,6 +9,7 @@ import {
   addActionItems,
   toggleActionItem,
   addInsights,
+  setDashboardSchema,
 } from "@/hooks/useGoalStore";
 import { listSignalsForGoal } from "@/hooks/useSignalStore";
 import {
@@ -236,6 +237,94 @@ export async function executeToolCall(
       const disableCapture = status !== "active";
       await updateGoalStatus(goalId, status, disableCapture || undefined);
       return { updated: true, goalId, status };
+    }
+
+    case "generate_dashboard": {
+      const goalId = input.goalId as string;
+      const resp = await fetch("/api/generate-dashboard-schema", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: input.title,
+          description: input.description,
+          category: input.category || undefined,
+        }),
+      });
+      if (!resp.ok) return { error: "Failed to generate dashboard schema" };
+      const data = await resp.json();
+      const schema = data.schema?.length > 0 ? data.schema : undefined;
+      if (schema) {
+        await setDashboardSchema(goalId, schema);
+        return {
+          generated: true,
+          goalId,
+          attributes: schema.map((a: { id: string; name: string; type: string }) => `${a.name} (${a.type})`),
+        };
+      }
+      return { generated: false, goalId, reason: "No schema attributes generated" };
+    }
+
+    case "scan_chats_for_signals": {
+      const goalId = input.goalId as string;
+      const chats = await listRegularChats();
+      const recentChats = chats.slice(0, 10);
+      let totalSignals = 0;
+      const signalSummaries: string[] = [];
+
+      for (const chat of recentChats) {
+        const assistantMessages = chat.messages
+          .filter((m: { role: string }) => m.role === "assistant")
+          .slice(-3);
+
+        const batchedTexts: { msgId: string; text: string }[] = [];
+        for (const msg of assistantMessages) {
+          const text =
+            msg.parts
+              ?.filter(
+                (p: { type: string }): p is { type: "text"; text: string } => p.type === "text",
+              )
+              .map((p: { text: string }) => p.text)
+              .join("") || "";
+          if (text.length > 50) {
+            batchedTexts.push({ msgId: msg.id, text: text.slice(0, 1200) });
+          }
+        }
+
+        if (batchedTexts.length === 0) continue;
+
+        const combined = batchedTexts.map((t) => t.text).join("\n---\n");
+        const resp = await fetch("/api/detect-signals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            responseText: combined.slice(0, 6000),
+            goals: [{
+              id: goalId,
+              title: input.title,
+              description: input.description,
+              category: (input.category as string) || "",
+            }],
+          }),
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.signals?.length > 0) {
+            const sourceMessageId = batchedTexts[batchedTexts.length - 1].msgId;
+            const count = await processDetectedSignals(data.signals, chat.id, sourceMessageId);
+            totalSignals += count;
+            for (const s of data.signals) {
+              signalSummaries.push(s.summary);
+            }
+          }
+        }
+      }
+
+      return {
+        scanned: recentChats.length,
+        signalsFound: totalSignals,
+        summaries: signalSummaries,
+      };
     }
 
     default:

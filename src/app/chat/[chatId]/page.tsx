@@ -22,7 +22,6 @@ import {
   setDashboardSchema,
   toggleActionItem,
   dismissInsight,
-  scanGoalThreadForSignals,
 } from "@/hooks/useGoalStore";
 import { listSignalsForGoal } from "@/hooks/useSignalStore";
 import { extractDocumentMetadata } from "@/lib/file-utils";
@@ -195,35 +194,6 @@ export default function ChatPage({
           setGoalTitle(chat.title);
           const sigs = await listSignalsForGoal(chatId);
           setSignals(sigs);
-          // Auto-generate dashboard schema if missing, then retroactive scan
-          if (!chat.goal.dashboardSchema?.length) {
-            fetch("/api/generate-dashboard-schema", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                title: chat.title,
-                description: chat.goal.description,
-                category: chat.goal.category || undefined,
-              }),
-            })
-              .then((r) => r.json())
-              .then(async (data) => {
-                if (data.schema?.length > 0) {
-                  await setDashboardSchema(chatId, data.schema);
-                  refreshGoalList();
-                  if (chat.messages.length > 0) {
-                    const count = await scanGoalThreadForSignals(chatId);
-                    if (count > 0) refreshGoalList();
-                  }
-                }
-              })
-              .catch(() => {/* best-effort */});
-          } else if (sigs.length === 0 && chat.messages.length > 0) {
-            // Retroactive self-scan: dashboard exists but no signals yet
-            scanGoalThreadForSignals(chatId).then((count) => {
-              if (count > 0) refreshGoalList();
-            });
-          }
         }
       }
       setInitialLoaded(true);

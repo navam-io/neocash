@@ -12,6 +12,7 @@ import {
   Lightbulb,
   ArrowUpDown,
   Globe,
+  Search,
   type LucideIcon,
 } from "lucide-react";
 import type { ToolName } from "@/lib/tool-schemas";
@@ -128,6 +129,20 @@ const toolLabels: Record<ToolName, ToolLabel> = {
     activeLabel: "Updating goal status...",
     doneLabel: "Updated goal status",
     icon: ArrowUpDown,
+    category: "write",
+  },
+  generate_dashboard: {
+    label: "Generating dashboard",
+    activeLabel: "Generating dashboard metrics...",
+    doneLabel: "Dashboard created",
+    icon: LayoutDashboard,
+    category: "write",
+  },
+  scan_chats_for_signals: {
+    label: "Scanning conversations",
+    activeLabel: "Scanning conversations for signals...",
+    doneLabel: "Scanned conversations",
+    icon: Search,
     category: "write",
   },
 };
