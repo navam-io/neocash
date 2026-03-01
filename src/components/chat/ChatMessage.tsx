@@ -1,14 +1,90 @@
 "use client";
 
+import { useState } from "react";
 import type { UIMessage } from "ai";
 import { isToolOrDynamicToolUIPart } from "ai";
-import { FileText, FileSpreadsheet, FileType, File } from "lucide-react";
+import { FileText, FileSpreadsheet, FileType, File, Globe, ChevronDown } from "lucide-react";
 
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { LoadingDots } from "@/components/ui/LoadingDots";
 import { ToolCallChip } from "@/components/chat/ToolCallChip";
 import { ToolCallGroup } from "@/components/chat/ToolCallGroup";
 import { getFileCategory } from "@/lib/file-utils";
+
+// ─── Source Citation Helpers ─────────────────────
+
+interface SourceInfo {
+  url: string;
+  title?: string;
+}
+
+function getMessageSources(message: UIMessage): SourceInfo[] {
+  if (!message.parts) return [];
+  const seen = new Set<string>();
+  const sources: SourceInfo[] = [];
+  for (const part of message.parts) {
+    if (part.type === "source-url" && part.url && !seen.has(part.url)) {
+      seen.add(part.url);
+      sources.push({ url: part.url, title: part.title });
+    }
+  }
+  return sources;
+}
+
+function getDomain(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
+const MAX_VISIBLE_SOURCES = 10;
+
+function SourcesCitation({ sources }: { sources: SourceInfo[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (sources.length === 0) return null;
+
+  const visible = expanded ? sources : sources.slice(0, MAX_VISIBLE_SOURCES);
+  const hasMore = sources.length > MAX_VISIBLE_SOURCES;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border">
+      <div className="flex items-center gap-1.5 mb-2 text-text-secondary text-xs font-medium">
+        <Globe size={13} />
+        <span>Sources</span>
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {visible.map((source, i) => (
+          <a
+            key={source.url}
+            href={source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 rounded-md border border-border bg-surface-hover px-2 py-0.5 text-xs text-accent hover:bg-surface-hover/80 transition-colors no-underline min-w-0"
+          >
+            <span className="text-text-tertiary font-mono text-[10px] shrink-0">{i + 1}</span>
+            <span className="truncate">
+              {source.title || getDomain(source.url)}
+            </span>
+          </a>
+        ))}
+        {hasMore && !expanded && (
+          <button
+            onClick={() => setExpanded(true)}
+            className="flex items-center justify-center gap-0.5 rounded-md border border-border px-2 py-0.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
+          >
+            +{sources.length - MAX_VISIBLE_SOURCES} more
+            <ChevronDown size={12} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Message Helpers ─────────────────────────────
 
 interface ChatMessageProps {
   message: UIMessage;
@@ -142,6 +218,7 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
   const text = getMessageText(message);
   const images = isUser ? getMessageImages(message) : [];
   const documents = isUser ? getMessageDocuments(message) : [];
+  const sources = isUser ? [] : getMessageSources(message);
 
   // Assistant messages with tool parts use parts-based rendering
   const usePartsRendering = !isUser && hasToolParts(message);
@@ -197,11 +274,15 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
           <>
             <AssistantParts parts={message.parts} />
             {isLoading && !text && <LoadingDots />}
+            <SourcesCitation sources={sources} />
           </>
         ) : isLoading && !text ? (
           <LoadingDots />
         ) : (
-          <MarkdownRenderer content={text} />
+          <>
+            <MarkdownRenderer content={text} />
+            <SourcesCitation sources={sources} />
+          </>
         )}
       </div>
     </div>

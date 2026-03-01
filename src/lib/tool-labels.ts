@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Lightbulb,
   ArrowUpDown,
+  Globe,
   type LucideIcon,
 } from "lucide-react";
 import type { ToolName } from "@/lib/tool-schemas";
@@ -131,6 +132,17 @@ const toolLabels: Record<ToolName, ToolLabel> = {
   },
 };
 
+// Provider-managed tools (e.g. Anthropic web search) — not in allTools schema
+const providerToolLabels: Record<string, ToolLabel> = {
+  webSearch: {
+    label: "Web search",
+    activeLabel: "Searching the web...",
+    doneLabel: "Searched the web",
+    icon: Globe,
+    category: "read",
+  },
+};
+
 const fallbackLabel: ToolLabel = {
   label: "Working",
   activeLabel: "Working...",
@@ -140,7 +152,7 @@ const fallbackLabel: ToolLabel = {
 };
 
 export function getToolLabel(toolName: string): ToolLabel {
-  return toolLabels[toolName as ToolName] ?? fallbackLabel;
+  return toolLabels[toolName as ToolName] ?? providerToolLabels[toolName] ?? fallbackLabel;
 }
 
 export function isWriteTool(toolName: string): boolean {

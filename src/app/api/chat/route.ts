@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return result.toUIMessageStreamResponse();
+    return result.toUIMessageStreamResponse({ sendSources: true });
   } catch (error) {
     console.error("Chat API error:", error);
 
