@@ -20,6 +20,19 @@ Evaluate Claude's built-in memory capabilities as a potential replacement for th
 
 ## Implemented
 
+### Markdown Table Fix
+
+Fix broken table rendering in assistant messages with web search citations.
+
+- Source-url parts from AI SDK web search were splitting markdown table rows across separate ReactMarkdown instances
+- Tables rendered with empty cells and remaining rows appeared as raw pipe-delimited text below the table
+- Merged consecutive text parts in `AssistantParts`, skipping non-visual parts (source-url, step-start) that break the merge chain
+- Both conflicts table and stocks table now render all rows with full cell content
+
+**Commits:** `133887a` Fix merge text parts across source-url boundaries for markdown tables
+
+---
+
 ### Thinking UI — [`intents/thinking-ui.md`](intents/thinking-ui.md)
 
 Extended thinking visualization and adaptive budget for research mode queries.
