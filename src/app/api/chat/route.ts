@@ -3,6 +3,7 @@ import { streamText, convertToModelMessages, stepCountIs } from "ai";
 import { SYSTEM_PROMPT, buildGoalSystemPrompt, buildMemoryContext, buildToolInstructions } from "@/lib/system-prompt";
 import { prepareMessagesForAPI } from "@/lib/message-windowing";
 import { allTools } from "@/lib/tool-schemas";
+import { getThinkingConfig } from "@/lib/thinking-budget";
 
 export const maxDuration = 60;
 
@@ -53,15 +54,18 @@ export async function POST(req: Request) {
       systemPrompt += `\n\n## Web Search\n\nYou have access to real-time web search. Use it proactively to find current market data, news, stock prices, and other time-sensitive information when relevant to the user's question. Do not claim you lack internet access — you can search the web.`;
     }
 
+    const selectedModel = model || "claude-sonnet-4-6";
+    const thinkingConfig = getThinkingConfig(selectedModel, windowedMessages, researchMode);
+
     const result = streamText({
-      model: anthropic(model || "claude-sonnet-4-6"),
+      model: anthropic(selectedModel),
       system: systemPrompt,
       messages: await convertToModelMessages(windowedMessages),
       stopWhen: stepCountIs(10),
-      ...(researchMode && {
+      ...(thinkingConfig && {
         providerOptions: {
           anthropic: {
-            thinking: { type: "enabled", budgetTokens: 10000 },
+            thinking: thinkingConfig,
           },
         },
       }),

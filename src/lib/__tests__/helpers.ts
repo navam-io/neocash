@@ -48,6 +48,32 @@ export function makeFileMessage(
 }
 
 /**
+ * Create an assistant UIMessage with a reasoning part and optional text part.
+ */
+export function makeReasoningMessage(
+  id: string,
+  reasoningText: string,
+  opts?: { text?: string; state?: "streaming" | "done" },
+): UIMessage {
+  const parts: UIMessage["parts"] = [
+    {
+      type: "reasoning",
+      text: reasoningText,
+      state: opts?.state ?? "done",
+    } as unknown as UIMessage["parts"][number],
+  ];
+  if (opts?.text) {
+    parts.push({ type: "text", text: opts.text });
+  }
+  return {
+    id,
+    role: "assistant",
+    parts,
+    createdAt: new Date(),
+  } as UIMessage;
+}
+
+/**
  * Generate a string of exactly `n` characters for token budget tests.
  */
 export function makeTextOfLength(n: number): string {

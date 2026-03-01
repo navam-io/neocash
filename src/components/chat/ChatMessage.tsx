@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import type { UIMessage } from "ai";
-import { isToolOrDynamicToolUIPart } from "ai";
+import { isToolOrDynamicToolUIPart, isReasoningUIPart } from "ai";
 import { FileText, FileSpreadsheet, FileType, File, Globe, ChevronDown } from "lucide-react";
 
 import { MarkdownRenderer } from "@/components/ui/MarkdownRenderer";
 import { LoadingDots } from "@/components/ui/LoadingDots";
 import { ToolCallChip } from "@/components/chat/ToolCallChip";
 import { ToolCallGroup } from "@/components/chat/ToolCallGroup";
+import { ThinkingBlock } from "@/components/chat/ThinkingBlock";
 import { getFileCategory } from "@/lib/file-utils";
 
 // ─── Source Citation Helpers ─────────────────────
@@ -127,8 +128,12 @@ function MessageDocIcon({ mediaType }: { mediaType: string }) {
 
 type MessagePart = UIMessage["parts"][number];
 
-function hasToolParts(message: UIMessage): boolean {
-  return message.parts?.some((p) => isToolOrDynamicToolUIPart(p)) ?? false;
+function hasNonTextParts(message: UIMessage): boolean {
+  return message.parts?.some((p) =>
+    isToolOrDynamicToolUIPart(p) ||
+    p.type === "reasoning" ||
+    p.type === "source-url"
+  ) ?? false;
 }
 
 function getToolInfo(part: MessagePart): {
@@ -202,8 +207,15 @@ function AssistantParts({ parts }: { parts: MessagePart[] }) {
       } else {
         elements.push(chips[0]);
       }
+    } else if (part.type === "reasoning") {
+      elements.push(
+        <ThinkingBlock key={`reasoning-${i}`} text={part.text} state={part.state} />
+      );
+      i++;
+    } else if (part.type === "step-start") {
+      i++; // Skip step boundaries — reasoning blocks + tool chips provide sufficient structure
     } else {
-      // Skip other part types (step-start, source, reasoning, etc.)
+      // Skip other part types (source-url, etc.)
       i++;
     }
   }
@@ -220,8 +232,8 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
   const documents = isUser ? getMessageDocuments(message) : [];
   const sources = isUser ? [] : getMessageSources(message);
 
-  // Assistant messages with tool parts use parts-based rendering
-  const usePartsRendering = !isUser && hasToolParts(message);
+  // Assistant messages with tool/reasoning/source parts use parts-based rendering
+  const usePartsRendering = !isUser && hasNonTextParts(message);
 
   return (
     <div className={`w-full ${isUser ? "flex justify-end" : ""}`}>
@@ -273,7 +285,7 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
         ) : usePartsRendering ? (
           <>
             <AssistantParts parts={message.parts} />
-            {isLoading && !text && <LoadingDots />}
+            {isLoading && !text && !message.parts?.some(p => p.type === "reasoning") && <LoadingDots />}
             <SourcesCitation sources={sources} />
           </>
         ) : isLoading && !text ? (

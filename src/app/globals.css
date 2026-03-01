@@ -245,8 +245,42 @@ body {
   animation: tool-chip-enter 200ms ease-out;
 }
 
+/* ─── Thinking pulse animation ────────────────── */
+@keyframes thinking-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.thinking-pulse {
+  animation: thinking-pulse 1.5s ease-in-out infinite;
+}
+
+/* ─── Thinking block enter animation ─────────── */
+@keyframes thinking-block-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.thinking-block-enter {
+  animation: thinking-block-enter 200ms ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .tool-chip-enter {
+  .tool-chip-enter,
+  .thinking-pulse,
+  .thinking-block-enter {
     animation: none;
   }
 }
