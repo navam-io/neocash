@@ -189,6 +189,54 @@ AI-powered category auto-suggestion and mandatory description/category for custo
 
 ---
 
+### Auto-Completion Detection
+
+AI-powered detection of completed goal action items from conversation context.
+
+- Haiku analyzes assistant responses against pending action items after each goal-thread reply
+- Detects implicit completions from user confirmation language (e.g., "I filed the form")
+- Auto-toggles action items with recently-completed visual feedback (green flash)
+- Fire-and-forget processing in `onFinish` (replaced by tool-based approach in Multi-Agent)
+
+**Commits:** `5e2e89d` Add AI-powered auto-completion detection for goal action items
+
+---
+
+### Unit Test Suite (Phase 1)
+
+Comprehensive unit tests for all `src/lib/` pure functions.
+
+- 99 tests across 9 test files covering memory-processing, message-windowing, file-utils, greeting, document-extraction, signal-text, signal-processing, models, and prompts
+- Vitest 4.x with `vi.mock()`, `vi.hoisted()`, `vi.useFakeTimers()` mock strategies
+- `helpers.ts` with UIMessage builders for test data construction
+- Relative path mocking pattern for `@/hooks/*` modules (alias doesn't resolve in vitest 4.x)
+
+**Commits:** `897c529` Add Phase 1 unit test suite for all src/lib/ pure functions
+
+---
+
+### Multi-Agent Capabilities — [`intents/multi-agent-capabilities.md`](intents/multi-agent-capabilities.md)
+
+Chat-native multi-agent system replacing hidden fire-and-forget processing with 15 transparent, visible tool calls. The AI gains full read+write agency over all financial data with Claude-style collapsible chips in the conversation.
+
+- **Transport switch**: `TextStreamChatTransport` → `DefaultChatTransport` with UI message protocol supporting tool-call parts
+- **15 tool schemas** (6 read, 9 write) defined with `tool()` from AI SDK + Zod — schema-only on server, client-side execution via IndexedDB stores
+  - READ: `list_goals`, `get_goal`, `list_signals`, `list_memories`, `list_documents`, `list_chats`
+  - WRITE: `save_memory`, `update_memory`, `delete_memory`, `save_signal`, `update_dashboard`, `add_action_items`, `complete_action_item`, `add_insights`, `update_goal_status`
+- **Client-side tool executor** dispatching tool calls to existing IndexedDB store functions (`processExtractedMemories`, `processDetectedSignals`, goal/memory/signal stores)
+- **Tool-call chip UI**: collapsible chips with working (spinner + copper), done (green check), error (red alert) states; expandable JSON detail; grouped parallel calls
+- **Parts-based message rendering**: assistant messages walk `message.parts` sequentially — text rendered as markdown, tool invocations as `ToolCallChip` components
+- **System prompt tool guidance**: `buildToolInstructions()` with when/when-not rules and common tool-chaining patterns for all 15 tools
+- **Fire-and-forget removal**: deleted `/api/extract-memories` and `/api/detect-completions` routes; removed ~190 lines of hidden signal/memory/completion processing from `onFinish`
+- **Multi-step tool loops**: `sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls` with `stopWhen: stepCountIs(10)` for up to 10 round-trips
+- **Sidebar refresh**: write operations auto-refresh memory/goal lists via `WRITE_TOOLS`, `MEMORY_TOOLS`, `GOAL_TOOLS` sets
+- **41 new unit tests** (tool-schemas: 12, tool-executor: 15, tool-labels: 8, plus 6 existing tests updated) — 140 total passing
+- CSS animation for tool chips with `prefers-reduced-motion` support
+
+**Commits:** `f68e091` Add chat-native multi-agent capabilities with 15 financial tools
+
+---
+
 ## In Progress
 
 ### Signal Intelligence — [`intents/signal-intelligence.md`](intents/signal-intelligence.md)
@@ -217,7 +265,12 @@ Comprehensive upgrades to signal detection quality, goal thread self-awareness, 
 
 | SHA | Message |
 |-----|---------|
+| `f68e091` | Add chat-native multi-agent capabilities with 15 financial tools |
+| `78a4de2` | Update changelog with auto-suggest category feature |
 | `ed491a9` | Add AI auto-suggest category and mandatory fields for custom goal creation |
+| `5e2e89d` | Add AI-powered auto-completion detection for goal action items |
+| `897c529` | Add Phase 1 unit test suite for all src/lib/ pure functions |
+| `d6dc63c` | Add goal creation screenshot and improve dashboard/signals captures |
 | `7058bd8` | Extract text from DOCX/XLSX uploads server-side for Claude reasoning |
 | `2fc2c76` | Strip unsupported file types (DOCX, XLSX) before sending to Anthropic API |
 | `6e5ab4b` | Fix context overflow, upgrade signal detection, add actionable dashboard |
