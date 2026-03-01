@@ -27,6 +27,7 @@ import { listSignalsForGoal } from "@/hooks/useSignalStore";
 import { extractDocumentMetadata } from "@/lib/file-utils";
 import { listAllMemories } from "@/hooks/useMemoryStore";
 import { executeToolCall } from "@/lib/tool-executor";
+import { withChatLock } from "@/lib/chat-write-lock";
 import { WRITE_TOOLS, MEMORY_TOOLS, GOAL_TOOLS, type ToolName } from "@/lib/tool-schemas";
 import { getAgentByGoalCategory, type AgentId } from "@/lib/agent-profiles";
 import { classifyByKeywords } from "@/lib/agent-router";
@@ -254,7 +255,7 @@ export default function ChatPage({
   // Persist messages to IndexedDB whenever they change
   useEffect(() => {
     if (messages.length === 0) return;
-    async function persist() {
+    withChatLock(chatId, async () => {
       const existing = await getChat(chatId);
       if (existing) {
         existing.messages = messages;
@@ -272,8 +273,7 @@ export default function ChatPage({
         await saveChat(existing);
         refreshChatList();
       }
-    }
-    persist();
+    });
   }, [messages, chatId, refreshChatList]);
 
   const handleStatusChange = useCallback(

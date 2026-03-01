@@ -132,7 +132,7 @@ export const saveSignalTool = tool({
 
 export const updateDashboardTool = tool({
   description:
-    "Update dashboard metric values for a goal. Use when the user provides specific numbers that map to tracked metrics (e.g. contribution amounts, tax liability, portfolio allocations).",
+    "Update dashboard metric values for a goal. Call this after completing analysis or when the user provides concrete data. Populate ALL metrics you can determine — don't wait for the user to provide each one. Values are keyed by the dashboard attribute ID (snake_case), e.g. {target_company: 'MSFT', current_price: 450, recommendation: 'BUY'}.",
   inputSchema: z.object({
     goalId: z.string().describe("The goal ID"),
     values: z
@@ -140,7 +140,7 @@ export const updateDashboardTool = tool({
         z.string(),
         z.union([z.string(), z.number(), z.boolean()]),
       )
-      .describe("Dashboard values keyed by attribute ID, e.g. {hsa_contributed: 8550}"),
+      .describe("Dashboard values keyed by attribute ID — include every metric you can determine from your analysis"),
   }),
 });
 

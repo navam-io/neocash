@@ -16,6 +16,12 @@ Evaluate Claude's built-in memory capabilities as a potential replacement for th
 
 ## Implemented
 
+### Dashboard Update Fixes — [`docs/plans/2026-02-28-dashboard-update-fixes.md`](docs/plans/2026-02-28-dashboard-update-fixes.md)
+
+Fixed two bugs preventing dashboard values from persisting in goal threads:
+1. **Race condition**: Messages persistence `useEffect` clobbered tool executor writes via concurrent read-modify-write on the same IndexedDB record. Fixed with a per-chat write serializer (`withChatLock`).
+2. **Model guidance**: Model only populated 1 of 10 dashboard fields. Improved `update_dashboard` tool description and goal thread system prompt to instruct bulk-population of all determinable metrics.
+
 ### Specialized Financial Agents — [`intents/agent-sdk.md`](intents/agent-sdk.md)
 
 Prompt-routing architecture with 4 specialized financial agents (Tax Advisor, Portfolio Analyzer, Budget Planner, Estate Planner) that receive focused system prompts and filtered tool subsets based on query classification.

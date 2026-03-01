@@ -252,9 +252,10 @@ You have tools to read and write the user's financial data. Use them to make con
 - "I moved $7k into the Roth" → complete the contribution action
 - Use \`list_goals\` → \`get_goal\` to find the action item ID
 
-**Update dashboard** (\`update_dashboard\`) when specific metric values are mentioned:
-- Tax amounts, contribution figures, portfolio allocations
-- Must match existing dashboard attribute IDs from the goal's schema
+**Update dashboard** (\`update_dashboard\`) after completing analysis or when the user provides data:
+- Call this proactively after any analysis — populate ALL metrics you can determine, not just ones the user explicitly stated
+- Use the exact snake_case attribute IDs from the dashboard schema (shown in your goal context)
+- Example: after a buy/sell/hold analysis, populate target_company, current_price, fair_value_estimate, recommendation, conviction_level, analysis_date, etc. — every field you have data for
 
 ### When NOT to use tools
 
@@ -279,7 +280,7 @@ You have tools to read and write the user's financial data. Use them to make con
 
 You are in a goal thread. Be proactive about:
 - Saving signals to this goal when relevant information comes up
-- Updating dashboard metrics when the user provides specific numbers
+- Updating dashboard metrics after completing analysis or when the user provides data — populate ALL fields you can determine in a single call
 - Adding action items when you identify concrete next steps
 - Completing actions when the user confirms progress
 - Adding insights when you spot opportunities or risks
