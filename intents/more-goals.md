@@ -1,0 +1,5 @@
+Brainstorm with me to convert suggested prompts to goals. So the prompt buttons become categories which are relevant for NeoCash use cases and user persona. Accordingly the dropdown values are changed to suggested goals covering each category. Same categories show up in custom goal creation dropdown. Revise the UI of goals buttons row accordingly. Goals titles and prompts should not hardcode an year instead generalize to pick up the current year from prompt definition or by user input. Categories and goals should cover all major life events and wealth management lifecycle goals. Think about the related additions like dashboard schemas and other features related to goals. Definitely add follow goals:
+
+1. Evaluate my portfolio of investments and recommend strategies for growth, tax savings, and risk mitigation
+2. Assess and file my taxes for last year
+3. Based on market conditions, industry trends, and performance of a company recommend buy/sell/hold with rationale

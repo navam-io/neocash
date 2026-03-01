@@ -237,27 +237,70 @@ Chat-native multi-agent system replacing hidden fire-and-forget processing with 
 
 ---
 
-## In Progress
+### Web Search — [`intents/search.md`](intents/search.md)
+
+Fix web search tool execution and enable Anthropic citation rendering.
+
+- Fixed web search tool not executing (provider tool needs server-side handling, not `onToolCall`)
+- `sendSources: true` on `toUIMessageStreamResponse()` to stream `source-url` parts to client
+- `SourcesCitation` component: deduplicates sources by URL, renders as 3-column grid of numbered chip links
+- Globe icon + "Sources" header, max 10 visible with "show all" toggle, opens in new tab
+- `providerToolLabels` map in tool-labels for provider-managed tools (not in allTools schema)
+- Web search tool chip shows "Searching the web..." → "Searched the web" (was falling back to generic "Working...")
+- Sources persist across page reload via IndexedDB message parts
+
+**Commits:** `e0a6949` Enable web search tool execution · `2c63bad` Enable web search source citations and tool label
+
+---
+
+### Long-Term Memory
+
+Hybrid memory system for cross-conversation user profile persistence.
+
+- Structured profile facts (income, filing status) + key financial decisions (chose Roth, started 529)
+- Tool-based extraction: model calls `save_memory` tool when user shares concrete data (visible via chip)
+- `MemoryRecord` with `key` field as dedup anchor — same key with new value updates existing record
+- Tiered injection: facts always in system prompt (~200 tokens), decisions keyword-matched against user message (top 5)
+- Caps: 50 facts / 20 decisions, prunes lowest-confidence oldest when at cap
+- Confidence threshold: 0.7 minimum for extraction
+- MemoryList sidebar (collapsible, top 5 facts), MemoryEditor modal (tabs: facts/decisions, inline edit)
+- `memoryListVersion` in AppContext triggers reactive refetch across components
+
+**Commits:** `5bfdf4f` Add long-term memory system for cross-conversation user profile · `e0a6949` Strengthen memory prompt framing
+
+---
 
 ### Signal Intelligence — [`intents/signal-intelligence.md`](intents/signal-intelligence.md)
 
-Comprehensive upgrades to signal detection quality, goal thread self-awareness, smart text preparation, and chat verbosity control. Partially committed, partially staged.
+Comprehensive upgrades to signal detection quality, goal thread self-awareness, smart text preparation, and chat verbosity control.
 
-**Committed (part of `6e5ab4b`):**
 - Goal thread self-signal detection (threads detect signals from their own messages)
 - Retroactive self-scan on goal thread load for goals with dashboard schemas
 - Actionable dashboard: Action Items (checkable, prioritized) and Insights (typed, dismissible)
-- Signal detection model upgrade from Haiku to Sonnet for richer extraction
 - Shared `processDetectedSignals()` helper eliminating 3x code duplication
-
-**Uncommitted (staged changes):**
 - Smart signal text preparation: 15K char budget with head+tail windowing, financial-density scoring
 - Chat verbosity reduction: system prompt conciseness guidelines, conversational tone
 - Signal detection quality gates: max 3 actions + 2 insights, quality gate on concrete data
 - Deduplication context: existing items passed to API, few-shot examples in prompt
-- Model optimized to Haiku 4.5 for signal detection (down from Sonnet — cost effective)
+- Model optimized to Haiku 4.5 for signal detection (cost effective)
 - Hard caps: 15 non-completed action items and 10 active insights per goal
 - Detection threshold raised from 50 to 200 characters
+
+**Commits:** `6e5ab4b` Fix context overflow, upgrade signal detection, add actionable dashboard · `af2b43c` Improve signal detection quality, chat conciseness, and smart text prep
+
+---
+
+### Goals-First Experience — [`intents/more-goals.md`](intents/more-goals.md)
+
+Transform suggested prompts into a goals-first experience with comprehensive wealth management categories.
+
+- Prompt system restructured from chat prompts to 8 goal-oriented categories
+- Categories cover major wealth management lifecycle: investing, taxes, retirement, estate, insurance, debt, education, real estate
+- Goal prompts generalized (no hardcoded years)
+- Dashboard schema generation adapted for new category structure
+- Restored dashboard and signal capture for predefined goals after restructuring
+
+**Commits:** `79f9f90` Transform prompt system into goals-first experience with 8 categories · `8209a64` Restore dashboard and signal capture for predefined goals
 
 ---
 
@@ -265,12 +308,23 @@ Comprehensive upgrades to signal detection quality, goal thread self-awareness, 
 
 | SHA | Message |
 |-----|---------|
+| `2c63bad` | Enable web search source citations and tool label |
+| `67bb4c7` | Update changelog with multi-agent capabilities, auto-completion, and test suite |
 | `f68e091` | Add chat-native multi-agent capabilities with 15 financial tools |
 | `78a4de2` | Update changelog with auto-suggest category feature |
 | `ed491a9` | Add AI auto-suggest category and mandatory fields for custom goal creation |
 | `5e2e89d` | Add AI-powered auto-completion detection for goal action items |
 | `897c529` | Add Phase 1 unit test suite for all src/lib/ pure functions |
 | `d6dc63c` | Add goal creation screenshot and improve dashboard/signals captures |
+| `192d875` | Change license from MIT to Apache 2.0 |
+| `82088ba` | Add professional README with screenshots, enriched sample data, and MIT license |
+| `e0a6949` | Enable web search tool execution and strengthen memory prompt framing |
+| `6b64bf6` | Remove horizontal scrollbar from dashboard panel |
+| `79f9f90` | Transform prompt system into goals-first experience with 8 categories |
+| `5bfdf4f` | Add long-term memory system for cross-conversation user profile |
+| `8209a64` | Restore dashboard and signal capture for predefined goals |
+| `af2b43c` | Improve signal detection quality, chat conciseness, and smart text prep |
+| `c8babf8` | Add missing intents and update changelog from conversation history |
 | `7058bd8` | Extract text from DOCX/XLSX uploads server-side for Claude reasoning |
 | `2fc2c76` | Strip unsupported file types (DOCX, XLSX) before sending to Anthropic API |
 | `6e5ab4b` | Fix context overflow, upgrade signal detection, add actionable dashboard |

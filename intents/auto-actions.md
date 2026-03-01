@@ -1,0 +1,1 @@
+Review the actions capture feature of the project. As conversations progress monitor for actions which can be auto completed and tag them complete automatically. add a mini progress bar for actions section.
