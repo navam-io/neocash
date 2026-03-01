@@ -189,14 +189,15 @@ AI-powered category auto-suggestion and mandatory description/category for custo
 
 ---
 
-### Auto-Completion Detection
+### Auto-Completion & Action Progress — [`intents/auto-actions.md`](intents/auto-actions.md)
 
-AI-powered detection of completed goal action items from conversation context.
+AI-powered detection of completed goal action items from conversation context with visual progress tracking.
 
 - Haiku analyzes assistant responses against pending action items after each goal-thread reply
 - Detects implicit completions from user confirmation language (e.g., "I filed the form")
-- Auto-toggles action items with recently-completed visual feedback (green flash)
-- Fire-and-forget processing in `onFinish` (replaced by tool-based approach in Multi-Agent)
+- Auto-toggles action items with recently-completed visual feedback (copper pulse animation)
+- Mini progress bar (4px copper) showing completed/total action item fraction in dashboard
+- Fire-and-forget processing in `onFinish` (replaced by tool-based `complete_action_item` in Multi-Agent)
 
 **Commits:** `5e2e89d` Add AI-powered auto-completion detection for goal action items
 
