@@ -39,12 +39,18 @@ export interface AgentResultEvent {
   task: string;
 }
 
+export interface AgentHeartbeatEvent {
+  type: "agent:heartbeat";
+  status: string;
+}
+
 export interface ConnectionErrorEvent {
   type: "connection_error";
   message: string;
 }
 
 export type AgentSSEEvent =
+  | AgentHeartbeatEvent
   | AgentStartedEvent
   | AgentProgressEvent
   | AgentCompletedEvent
@@ -72,4 +78,22 @@ export interface AgentProgressState {
   steps: AgentStep[];
   startedAt: number;
   elapsedMs: number;
+}
+
+// ─── Client-safe task → sub-agent mapping ────────
+// Duplicated from agent-tasks.ts to avoid importing
+// server-only code (Agent SDK → child_process) into
+// client components.
+
+const TASK_SUB_AGENTS: Record<string, string[]> = {
+  financial_health_check: ["tax_analyst", "portfolio_analyst", "budget_analyst", "estate_analyst"],
+  tax_review: ["tax_analyst"],
+  portfolio_analysis: ["portfolio_analyst"],
+  budget_optimization: ["budget_analyst"],
+  estate_review: ["estate_analyst"],
+  cross_goal_report: ["tax_analyst", "portfolio_analyst", "budget_analyst", "estate_analyst"],
+};
+
+export function getTaskSubAgents(task: string): string[] {
+  return TASK_SUB_AGENTS[task] ?? [];
 }

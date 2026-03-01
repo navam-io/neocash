@@ -277,10 +277,27 @@ body {
   animation: thinking-block-enter 200ms ease-out;
 }
 
+/* ─── Agent step slide-in animation ──────────── */
+@keyframes step-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.step-slide-in {
+  animation: step-slide-in 0.3s ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .tool-chip-enter,
   .thinking-pulse,
-  .thinking-block-enter {
+  .thinking-block-enter,
+  .step-slide-in {
     animation: none;
   }
 }

@@ -66,6 +66,11 @@ export function AgentProgressPanel({ progress }: AgentProgressPanelProps) {
       <div className="flex items-center gap-2 px-3 py-2">
         <Loader2 size={14} className="text-accent animate-spin shrink-0" />
         <span className="text-xs font-medium text-accent">Running deep analysis...</span>
+        {/* Live indicator dot — signals active SSE connection */}
+        <span className="relative flex h-2 w-2 shrink-0">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+        </span>
         <span className="ml-auto text-[10px] text-text-tertiary font-mono">
           {formatElapsed(progress.elapsedMs)}
         </span>
@@ -74,7 +79,10 @@ export function AgentProgressPanel({ progress }: AgentProgressPanelProps) {
       {/* Steps */}
       <div className="border-t border-accent/10 px-3 py-1.5 space-y-1">
         {progress.steps.map((step) => (
-          <div key={step.agentName} className="flex items-center gap-2 py-0.5">
+          <div
+            key={step.agentName}
+            className={`flex items-center gap-2 py-0.5${step.status !== "pending" ? " step-slide-in" : ""}`}
+          >
             <div className="w-4 flex items-center justify-center shrink-0">
               <StepIcon status={step.status} />
             </div>

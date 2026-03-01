@@ -90,9 +90,46 @@ export async function POST(req: Request) {
 
     // Track per-agent start times for duration calculation
     const agentStartTimes = new Map<string, number>();
-    // Debounce progress events per agent (500ms)
-    const lastProgressTime = new Map<string, number>();
-    const PROGRESS_DEBOUNCE_MS = 500;
+    // Track which agent is currently running (tasks execute sequentially —
+    // when a new task_started fires, the previous agent has completed)
+    let lastStartedAgent: string | null = null;
+
+    // Resolve agent name from SDK task_id or description.
+    // task_id is a UUID (not the agent config key), so we fall back to
+    // word-based matching: split agent name on "_" and check if any
+    // significant word (>2 chars) appears in the description.
+    const resolveAgentName = (taskId?: string, desc?: string): string | null => {
+      if (taskId && knownAgentNames.has(taskId)) return taskId;
+      if (desc) {
+        const descLower = desc.toLowerCase();
+        for (const name of knownAgentNames) {
+          const words = name.split("_");
+          if (words.some((w) => w.length > 2 && descLower.includes(w))) {
+            return name;
+          }
+        }
+      }
+      return null;
+    };
+
+    // Helper: emit agent:completed for a given agent
+    const emitCompleted = (
+      controller: ReadableStreamDefaultController,
+      agentName: string,
+    ) => {
+      const startTime = agentStartTimes.get(agentName);
+      const durationMs = startTime ? Date.now() - startTime : 0;
+      controller.enqueue(
+        encoder.encode(
+          sseEvent("agent:completed", {
+            taskId: agentName,
+            agentName,
+            summary: "",
+            durationMs,
+          }),
+        ),
+      );
+    };
 
     // SSE stream
     const encoder = new TextEncoder();
@@ -100,6 +137,11 @@ export async function POST(req: Request) {
       async start(controller) {
         try {
           let resultText = "";
+
+          // Send immediate heartbeat so the client knows the stream is alive
+          controller.enqueue(
+            encoder.encode(sseEvent("agent:heartbeat", { status: "connected" })),
+          );
 
           for await (const message of query({
             prompt: orchestratorPrompt,
@@ -120,85 +162,50 @@ export async function POST(req: Request) {
           })) {
             const msg = message as Record<string, unknown>;
 
-            // Match agent name from message description against known sub-agents
-            const matchAgentName = (desc?: string): string | null => {
-              if (!desc) return null;
-              for (const name of knownAgentNames) {
-                if (desc.toLowerCase().includes(name.toLowerCase())) return name;
-              }
-              return null;
-            };
-
-            // Handle different message types from the Agent SDK
-            if (msg.type === "agent") {
-              const subtype = msg.subtype as string | undefined;
+            // ─── Handle system messages (task lifecycle) ─────
+            // The SDK emits type="system" with subtypes:
+            //   - "init": session initialization
+            //   - "task_started": a sub-agent Task was spawned
+            // It does NOT emit task_progress or task_notification.
+            // Sub-agent completion is inferred: when a new task_started
+            // fires, the previous sub-agent must have finished (sequential
+            // execution). The final agent completes on result.success.
+            if (msg.type === "system" && msg.subtype === "task_started") {
+              const taskId = msg.task_id as string | undefined;
               const description = (msg.description as string) || "";
-              const agentName = matchAgentName(description);
+              const agentName = resolveAgentName(taskId, description);
 
-              if (subtype === "task_started" && agentName) {
+              if (agentName) {
+                // If a previous agent was running, it just completed
+                if (lastStartedAgent && lastStartedAgent !== agentName) {
+                  emitCompleted(controller, lastStartedAgent);
+                }
+
+                lastStartedAgent = agentName;
                 agentStartTimes.set(agentName, Date.now());
                 controller.enqueue(
                   encoder.encode(
                     sseEvent("agent:started", {
-                      taskId: (msg.taskId as string) || agentName,
+                      taskId: taskId || agentName,
                       agentName,
                       description,
                       total: taskConfig.subAgents.length,
                     }),
                   ),
                 );
-              } else if (subtype === "task_progress" && agentName) {
-                // Debounce progress events
-                const now = Date.now();
-                const last = lastProgressTime.get(agentName) || 0;
-                if (now - last >= PROGRESS_DEBOUNCE_MS) {
-                  lastProgressTime.set(agentName, now);
-                  controller.enqueue(
-                    encoder.encode(
-                      sseEvent("agent:progress", {
-                        taskId: (msg.taskId as string) || agentName,
-                        agentName,
-                        description,
-                        lastTool: (msg.toolName as string) || undefined,
-                      }),
-                    ),
-                  );
-                }
-              } else if (subtype === "task_notification" && agentName) {
-                const status = (msg.status as string) || "";
-                const startTime = agentStartTimes.get(agentName);
-                const durationMs = startTime ? Date.now() - startTime : 0;
-
-                if (status === "completed" || status === "success") {
-                  controller.enqueue(
-                    encoder.encode(
-                      sseEvent("agent:completed", {
-                        taskId: (msg.taskId as string) || agentName,
-                        agentName,
-                        summary: (msg.summary as string) || description,
-                        durationMs,
-                      }),
-                    ),
-                  );
-                } else {
-                  controller.enqueue(
-                    encoder.encode(
-                      sseEvent("agent:error", {
-                        taskId: (msg.taskId as string) || agentName,
-                        agentName,
-                        summary: (msg.summary as string) || description,
-                      }),
-                    ),
-                  );
-                }
               }
             }
 
-            // Collect the final result
+            // ─── Collect the final result ────────────────────
             if (
               msg.type === "result" &&
               (msg.subtype as string) === "success"
             ) {
+              // Complete the last running agent before emitting result
+              if (lastStartedAgent) {
+                emitCompleted(controller, lastStartedAgent);
+                lastStartedAgent = null;
+              }
               resultText = (msg.result as string) || "";
             }
           }
@@ -268,6 +275,7 @@ export async function POST(req: Request) {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache, no-transform",
         Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
       },
     });
   } catch (error) {

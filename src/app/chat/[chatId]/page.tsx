@@ -31,7 +31,7 @@ import { withChatLock } from "@/lib/chat-write-lock";
 import { WRITE_TOOLS, MEMORY_TOOLS, GOAL_TOOLS, type ToolName } from "@/lib/tool-schemas";
 import { getAgentByGoalCategory, type AgentId } from "@/lib/agent-profiles";
 import { classifyByKeywords } from "@/lib/agent-router";
-import { getTaskSubAgents } from "@/lib/agent-tasks";
+import { getTaskSubAgents } from "@/lib/agent-progress-types";
 import { initProgress, updateProgress, clearProgress } from "@/lib/agent-progress-store";
 import type { DashboardSchema, GoalMeta, GoalStatus, MemoryRecord, SignalRecord } from "@/types";
 
