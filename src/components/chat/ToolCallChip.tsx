@@ -10,6 +10,7 @@ interface ToolCallChipProps {
   input?: unknown;
   output?: unknown;
   isError?: boolean;
+  stale?: boolean;
 }
 
 export function ToolCallChip({
@@ -17,12 +18,15 @@ export function ToolCallChip({
   state,
   input,
   output,
-  isError,
+  isError: isErrorProp,
+  stale,
 }: ToolCallChipProps) {
   const [expanded, setExpanded] = useState(false);
   const label = getToolLabel(toolName);
   const isWorking = state === "input-streaming" || state === "input-available";
   const isDone = state === "output-available" || state === "output-error" || state === "output-denied";
+  // Stale: stream ended but this tool never completed — treat as error
+  const isError = isErrorProp || (stale && isWorking);
   const isWrite = label.category === "write";
 
   const displayText = isError

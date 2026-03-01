@@ -166,7 +166,7 @@ function getToolInfo(part: MessagePart): {
 
 // ─── Parts-Based Rendering for Assistant Messages ─
 
-function AssistantParts({ parts }: { parts: MessagePart[] }) {
+function AssistantParts({ parts, streamActive }: { parts: MessagePart[]; streamActive?: boolean }) {
   const elements: React.ReactNode[] = [];
   let i = 0;
 
@@ -195,6 +195,7 @@ function AssistantParts({ parts }: { parts: MessagePart[] }) {
           input={info.input}
           output={info.output}
           isError={info.isError}
+          stale={!streamActive}
         />
       ));
 
@@ -284,7 +285,7 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
           </>
         ) : usePartsRendering ? (
           <>
-            <AssistantParts parts={message.parts} />
+            <AssistantParts parts={message.parts} streamActive={isLoading} />
             {isLoading && !text && !message.parts?.some(p => p.type === "reasoning") && <LoadingDots />}
             <SourcesCitation sources={sources} />
           </>
