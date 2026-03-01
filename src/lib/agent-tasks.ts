@@ -343,6 +343,10 @@ export function buildTaskPrompt(task: AgentTaskType, goalIds?: string[]): string
   return agentTasks[task].buildPrompt(goalIds);
 }
 
+export function getTaskSubAgents(task: string): string[] {
+  return agentTasks[task as AgentTaskType]?.subAgents ?? [];
+}
+
 export const ALL_TASK_TYPES: AgentTaskType[] = [
   "financial_health_check",
   "tax_review",

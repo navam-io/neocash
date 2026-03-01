@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Loader2, Check, AlertCircle, ChevronDown } from "lucide-react";
 import { getToolLabel } from "@/lib/tool-labels";
+import { useAgentProgress } from "@/hooks/useAgentProgress";
+import { AgentProgressPanel } from "@/components/chat/AgentProgressPanel";
 
 interface ToolCallChipProps {
   toolName: string;
@@ -22,6 +24,7 @@ export function ToolCallChip({
   stale,
 }: ToolCallChipProps) {
   const [expanded, setExpanded] = useState(false);
+  const progress = useAgentProgress();
   const label = getToolLabel(toolName);
   const isWorking = state === "input-streaming" || state === "input-available";
   const isDone = state === "output-available" || state === "output-error" || state === "output-denied";
@@ -38,6 +41,16 @@ export function ToolCallChip({
         : label.label;
 
   const Icon = label.icon;
+
+  // Show expanding progress panel for background agent while running
+  const showProgressPanel =
+    toolName === "run_background_agent" &&
+    isWorking &&
+    progress?.status === "running";
+
+  if (showProgressPanel) {
+    return <AgentProgressPanel progress={progress} />;
+  }
 
   return (
     <div className="tool-chip-enter my-1.5">

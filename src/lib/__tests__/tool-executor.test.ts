@@ -434,6 +434,21 @@ describe("tool-executor", () => {
   });
 
   describe("run_background_agent", () => {
+    // Helper: create a mock SSE ReadableStream from event strings
+    function createSSEStream(events: { event: string; data: unknown }[]) {
+      const encoder = new TextEncoder();
+      return new ReadableStream({
+        start(controller) {
+          for (const { event, data } of events) {
+            controller.enqueue(
+              encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
+            );
+          }
+          controller.close();
+        },
+      });
+    }
+
     it("collects snapshot, calls API, and applies diffs", async () => {
       const mockSnapshot = { goals: [], memories: [], signals: [], documents: [], chats: [] };
       mockCollectDataSnapshot.mockResolvedValue(mockSnapshot);
@@ -446,11 +461,11 @@ describe("tool-executor", () => {
 
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          diffs: mockDiffs,
-          summary: "Analysis complete: found 3 optimization opportunities.",
-          changeCount: 2,
-        }),
+        body: createSSEStream([
+          { event: "agent:started", data: { taskId: "t1", agentName: "tax_analyst", description: "Starting", total: 4 } },
+          { event: "agent:completed", data: { taskId: "t1", agentName: "tax_analyst", summary: "Done", durationMs: 1000 } },
+          { event: "agent:result", data: { diffs: mockDiffs, summary: "Analysis complete: found 3 optimization opportunities.", changeCount: 2, task: "financial_health_check" } },
+        ]),
       });
 
       mockApplyDiffs.mockResolvedValue(undefined);
@@ -472,14 +487,13 @@ describe("tool-executor", () => {
     });
 
     it("passes goalIds to API when provided", async () => {
+      const emptyDiffs = { goals: { created: [], updated: [], deleted: [] }, memories: { created: [], updated: [], deleted: [] }, signals: { created: [], updated: [], deleted: [] } };
       mockCollectDataSnapshot.mockResolvedValue({ goals: [], memories: [], signals: [], documents: [], chats: [] });
       globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve({
-          diffs: { goals: { created: [], updated: [], deleted: [] }, memories: { created: [], updated: [], deleted: [] }, signals: { created: [], updated: [], deleted: [] } },
-          summary: "Done",
-          changeCount: 0,
-        }),
+        body: createSSEStream([
+          { event: "agent:result", data: { diffs: emptyDiffs, summary: "Done", changeCount: 0, task: "tax_review" } },
+        ]),
       });
       mockApplyDiffs.mockResolvedValue(undefined);
 

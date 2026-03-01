@@ -26,9 +26,12 @@ import type { AgentDataDiff } from "@/lib/agent-data";
 import type { ToolName } from "@/lib/tool-schemas";
 import type { DashboardValues, GoalStatus } from "@/types";
 
+import type { AgentSSEEvent } from "@/lib/agent-progress-types";
+
 interface ExecutorContext {
   chatId: string;
   messageId: string;
+  onAgentProgress?: (event: AgentSSEEvent) => void;
 }
 
 export async function executeToolCall(
@@ -336,7 +339,7 @@ export async function executeToolCall(
       // Collect full data snapshot from IndexedDB stores
       const snapshot = await collectDataSnapshot();
 
-      // POST to background-agent API
+      // POST to background-agent API (SSE stream)
       const resp = await fetch("/api/background-agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -350,26 +353,96 @@ export async function executeToolCall(
         };
       }
 
-      const { diffs, summary, changeCount } = (await resp.json()) as {
+      // Parse SSE stream
+      const reader = resp.body?.getReader();
+      if (!reader) {
+        return { error: "Background agent returned no stream body" };
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      interface AgentFinalResult {
         diffs: AgentDataDiff;
         summary: string;
         changeCount: number;
-      };
+        task: string;
+      }
+      let finalResult: AgentFinalResult | null = null;
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Split on double-newline (SSE event boundary)
+          const events = buffer.split("\n\n");
+          // Keep last partial chunk in buffer
+          buffer = events.pop() || "";
+
+          for (const raw of events) {
+            if (!raw.trim()) continue;
+
+            let eventType = "";
+            let eventData = "";
+
+            for (const line of raw.split("\n")) {
+              if (line.startsWith("event: ")) {
+                eventType = line.slice(7).trim();
+              } else if (line.startsWith("data: ")) {
+                eventData = line.slice(6);
+              }
+            }
+
+            if (!eventType || !eventData) continue;
+
+            try {
+              const parsed = JSON.parse(eventData);
+
+              // Forward progress events to the store via callback
+              if (context.onAgentProgress) {
+                context.onAgentProgress({ type: eventType, ...parsed } as AgentSSEEvent);
+              }
+
+              // Capture the final result
+              if (eventType === "agent:result") {
+                finalResult = parsed as AgentFinalResult;
+              }
+            } catch {
+              // Skip malformed JSON
+            }
+          }
+        }
+      } catch (err) {
+        // Connection error — notify store
+        if (context.onAgentProgress) {
+          context.onAgentProgress({
+            type: "connection_error",
+            message: err instanceof Error ? err.message : "Stream interrupted",
+          });
+        }
+        return { error: `Background agent stream failed: ${err}` };
+      }
+
+      if (!finalResult) {
+        return { error: "Background agent completed without a result" };
+      }
 
       // Apply diffs to IndexedDB
-      await applyDiffs(diffs);
+      await applyDiffs(finalResult.diffs);
 
       return {
         completed: true,
-        task,
-        summary,
-        changeCount,
-        goalUpdates: diffs.goals.updated.length,
-        newInsights: diffs.goals.updated.reduce(
+        task: finalResult.task,
+        summary: finalResult.summary,
+        changeCount: finalResult.changeCount,
+        goalUpdates: finalResult.diffs.goals.updated.length,
+        newInsights: finalResult.diffs.goals.updated.reduce(
           (acc, g) => acc + (g.goal.insights?.length ?? 0),
           0,
         ),
-        newSignals: diffs.signals.created.length,
+        newSignals: finalResult.diffs.signals.created.length,
       };
     }
 

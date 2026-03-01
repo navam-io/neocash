@@ -31,6 +31,8 @@ import { withChatLock } from "@/lib/chat-write-lock";
 import { WRITE_TOOLS, MEMORY_TOOLS, GOAL_TOOLS, type ToolName } from "@/lib/tool-schemas";
 import { getAgentByGoalCategory, type AgentId } from "@/lib/agent-profiles";
 import { classifyByKeywords } from "@/lib/agent-router";
+import { getTaskSubAgents } from "@/lib/agent-tasks";
+import { initProgress, updateProgress, clearProgress } from "@/lib/agent-progress-store";
 import type { DashboardSchema, GoalMeta, GoalStatus, MemoryRecord, SignalRecord } from "@/types";
 
 const mobileQuery = "(max-width: 767px)";
@@ -94,11 +96,23 @@ export default function ChatPage({
       // Skip Anthropic built-in tools (web search) — handled by the provider
       if ("dynamic" in toolCall && toolCall.dynamic) return;
 
+      // Initialize progress tracking for background agent
+      const isBackgroundAgent = toolCall.toolName === "run_background_agent";
+      if (isBackgroundAgent) {
+        const taskType = (toolCall.input as Record<string, unknown>).task as string;
+        const subAgents = getTaskSubAgents(taskType);
+        initProgress(toolCall.toolCallId, taskType, subAgents);
+      }
+
       try {
         const result = await executeToolCall(
           toolCall.toolName,
           toolCall.input as Record<string, unknown>,
-          { chatId, messageId: "current" },
+          {
+            chatId,
+            messageId: "current",
+            onAgentProgress: isBackgroundAgent ? updateProgress : undefined,
+          },
         );
         addToolOutput({
           tool: toolCall.toolName,
@@ -113,6 +127,9 @@ export default function ChatPage({
           errorText: String(err),
         });
       }
+
+      // Clear progress after background agent completes (success or error)
+      if (isBackgroundAgent) clearProgress();
 
       // Refresh sidebar lists after write operations
       const name = toolCall.toolName as ToolName;
@@ -138,6 +155,7 @@ export default function ChatPage({
       setChatError({ message: "Something went wrong. Please try again." });
     },
     onFinish: async ({ message }) => {
+      clearProgress(); // Safety net: ensure progress is cleared
       setChatError(null);
       refreshChatList();
       if (goalMeta) refreshGoalList();
@@ -192,7 +210,10 @@ export default function ChatPage({
   // Set active chat
   useEffect(() => {
     setActiveChatId(chatId);
-    return () => setActiveChatId(null);
+    return () => {
+      setActiveChatId(null);
+      clearProgress(); // Cleanup progress on navigation
+    };
   }, [chatId, setActiveChatId]);
 
   // Load memories from IndexedDB (refresh on memoryListVersion changes)
