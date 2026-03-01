@@ -4,10 +4,6 @@ Living tracker of feature intents and their implementation status.
 
 ## Future
 
-### Thinking UI — [`intents/thinking-ui.md`](intents/thinking-ui.md)
-
-Render extended thinking and reasoning parts to the user. Show thinking indicators during streaming, collapsible reasoning blocks, and adaptive thinking budget based on query complexity.
-
 ### Agent SDK — [`intents/agent-sdk.md`](intents/agent-sdk.md)
 
 Evaluate Claude Agent SDK for multi-agent orchestration. Specialized financial agents (tax advisor, portfolio analyzer, budget planner, estate planner) with focused system prompts and tool subsets.
@@ -23,6 +19,22 @@ Evaluate Claude's built-in memory capabilities as a potential replacement for th
 ---
 
 ## Implemented
+
+### Thinking UI — [`intents/thinking-ui.md`](intents/thinking-ui.md)
+
+Extended thinking visualization and adaptive budget for research mode queries.
+
+- Pulsing copper "Thinking..." indicator during active reasoning with `animate-pulse`
+- Collapsed "Thought for a moment" block (Brain icon + chevron) after reasoning completes
+- Expandable reasoning text with copper left border and italic styling
+- Multiple thinking blocks per response when model interleaves thinking and tool use
+- Adaptive thinking budget: `getThinkingBudget()` classifies queries as analytical/comparison/simple and assigns 10K/6K/2K token budgets
+- 13 unit tests for budget classification across all query categories
+- Stale tool chip fix: when a 503 or stream error kills the response mid-flight, tool chips stuck in `input-available` state now render as red "Error" chips instead of infinite spinners
+
+**Commits:** `5c63852` Add thinking UI with adaptive budget for research mode · `c2fb1a6` Fix error state for tool chips when stream fails mid-flight
+
+---
 
 ### Project Foundation — [`intents/claude-clone.md`](intents/claude-clone.md)
 
@@ -332,6 +344,9 @@ Transform suggested prompts into a goals-first experience with comprehensive wea
 
 | SHA | Message |
 |-----|---------|
+| `c2fb1a6` | Fix error state for tool chips when stream fails mid-flight |
+| `5c63852` | Add thinking UI with adaptive budget for research mode |
+| `7e95fe2` | Split multi-agent brainstorm into 3 focused future intents |
 | `2e7ce6f` | Link auto-actions intent to changelog and add progress bar detail |
 | `d021cdd` | Sync changelog with git history and add missing intent files |
 | `2c63bad` | Enable web search source citations and tool label |
