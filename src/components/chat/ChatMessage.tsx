@@ -10,7 +10,9 @@ import { LoadingDots } from "@/components/ui/LoadingDots";
 import { ToolCallChip } from "@/components/chat/ToolCallChip";
 import { ToolCallGroup } from "@/components/chat/ToolCallGroup";
 import { ThinkingBlock } from "@/components/chat/ThinkingBlock";
+import { AgentChip } from "@/components/chat/AgentChip";
 import { getFileCategory } from "@/lib/file-utils";
+import type { AgentId } from "@/lib/agent-profiles";
 
 // ─── Source Citation Helpers ─────────────────────
 
@@ -90,6 +92,7 @@ function SourcesCitation({ sources }: { sources: SourceInfo[] }) {
 interface ChatMessageProps {
   message: UIMessage;
   isLoading?: boolean;
+  agentId?: AgentId;
 }
 
 function getMessageText(message: UIMessage): string {
@@ -242,7 +245,7 @@ function AssistantParts({ parts, streamActive }: { parts: MessagePart[]; streamA
 
 // ─── Main Component ──────────────────────────────
 
-export function ChatMessage({ message, isLoading }: ChatMessageProps) {
+export function ChatMessage({ message, isLoading, agentId }: ChatMessageProps) {
   const isUser = message.role === "user";
   const text = getMessageText(message);
   const images = isUser ? getMessageImages(message) : [];
@@ -301,14 +304,19 @@ export function ChatMessage({ message, isLoading }: ChatMessageProps) {
           </>
         ) : usePartsRendering ? (
           <>
+            {agentId && <AgentChip agentId={agentId} />}
             <AssistantParts parts={message.parts} streamActive={isLoading} />
             {isLoading && !text && !message.parts?.some(p => p.type === "reasoning") && <LoadingDots />}
             <SourcesCitation sources={sources} />
           </>
         ) : isLoading && !text ? (
-          <LoadingDots />
+          <>
+            {agentId && <AgentChip agentId={agentId} />}
+            <LoadingDots />
+          </>
         ) : (
           <>
+            {agentId && <AgentChip agentId={agentId} />}
             <MarkdownRenderer content={text} />
             <SourcesCitation sources={sources} />
           </>

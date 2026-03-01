@@ -272,3 +272,11 @@ export const GOAL_TOOLS = new Set<ToolName>([
   "generate_dashboard",
   "scan_chats_for_signals",
 ]);
+
+export function getToolSubset(toolNames: ToolName[]): Partial<typeof allTools> {
+  const subset: Partial<typeof allTools> = {};
+  for (const name of toolNames) {
+    if (allTools[name]) (subset as Record<string, unknown>)[name] = allTools[name];
+  }
+  return subset;
+}

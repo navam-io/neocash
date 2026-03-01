@@ -3,13 +3,15 @@
 import type { UIMessage } from "ai";
 import { ChatMessage } from "./ChatMessage";
 import { useScrollToBottom } from "@/hooks/useScrollToBottom";
+import type { AgentId } from "@/lib/agent-profiles";
 
 interface ChatMessagesProps {
   messages: UIMessage[];
   isLoading: boolean;
+  agentId?: AgentId;
 }
 
-export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
+export function ChatMessages({ messages, isLoading, agentId }: ChatMessagesProps) {
   const { ref } = useScrollToBottom<HTMLDivElement>([messages, isLoading]);
 
   return (
@@ -27,6 +29,7 @@ export function ChatMessages({ messages, isLoading }: ChatMessagesProps) {
               i === messages.length - 1 &&
               message.role === "assistant"
             }
+            agentId={message.role === "assistant" ? agentId : undefined}
           />
         ))}
       </div>

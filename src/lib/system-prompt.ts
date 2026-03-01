@@ -1,4 +1,5 @@
 import type { GoalMeta, MemoryCategory, MemoryRecord, SignalRecord } from "@/types";
+import type { AgentProfile } from "@/lib/agent-profiles";
 
 export const SYSTEM_PROMPT = `You are NeoCash, a knowledgeable and thoughtful personal wealth management assistant. You help users with:
 
@@ -287,5 +288,26 @@ You are in a goal thread. Be proactive about:
   }
 
   return instructions;
+}
+
+// ─── Specialist System Prompt ────────────────────
+
+export function buildSpecialistSystemPrompt(
+  agentProfile: AgentProfile,
+  goalContext?: {
+    title: string;
+    goal: GoalMeta;
+    signals: SignalRecord[];
+  },
+): string {
+  let prompt = goalContext
+    ? buildGoalSystemPrompt(goalContext.title, goalContext.goal, goalContext.signals)
+    : SYSTEM_PROMPT;
+
+  if (agentProfile.id !== "generalist") {
+    prompt += `\n\n## Active Specialist: ${agentProfile.name}\n\n${agentProfile.systemPromptExtension}`;
+  }
+
+  return prompt;
 }
 

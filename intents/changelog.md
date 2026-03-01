@@ -4,9 +4,9 @@ Living tracker of feature intents and their implementation status.
 
 ## Future
 
-### Agent SDK — [`intents/agent-sdk.md`](intents/agent-sdk.md)
+### Agent SDK Phase 2 — [`intents/agent-sdk.md`](intents/agent-sdk.md)
 
-Evaluate Claude Agent SDK for multi-agent orchestration. Specialized financial agents (tax advisor, portfolio analyzer, budget planner, estate planner) with focused system prompts and tool subsets.
+Evaluate Claude Agent SDK for true multi-agent orchestration with subagent delegation, building on the Phase 1 prompt-routing foundation.
 
 ### Memory Refactor — [`intents/memory-refactor.md`](intents/memory-refactor.md)
 
@@ -15,6 +15,20 @@ Evaluate Claude's built-in memory capabilities as a potential replacement for th
 ---
 
 ## Implemented
+
+### Specialized Financial Agents — [`intents/agent-sdk.md`](intents/agent-sdk.md)
+
+Prompt-routing architecture with 4 specialized financial agents (Tax Advisor, Portfolio Analyzer, Budget Planner, Estate Planner) that receive focused system prompts and filtered tool subsets based on query classification.
+
+- **4 specialist agents** with domain-specific system prompt extensions and tool subsets (7-8 tools each vs 17 for generalist)
+- **3-tier query router**: goal category override (instant) → Haiku classifier (~200ms) → keyword fallback (instant)
+- **Tool subset filtering**: `getToolSubset()` restricts model to domain-relevant tools — model can't call tools outside its subset
+- **AgentChip component**: copper-accent pill with specialist icon + name before assistant messages (hidden for generalist)
+- **Client-side classification**: mirrors server routing via goal category mapping + keyword matching for chip display
+- **`buildSpecialistSystemPrompt()`**: composes base/goal prompt + specialist extension in a single function
+- 82 new unit tests (agent-profiles: 58, agent-router: 24) — 249 total passing
+
+---
 
 ### Eliminate Fire-and-Forget — [`intents/eliminate-fire-and-forget.md`](intents/eliminate-fire-and-forget.md)
 

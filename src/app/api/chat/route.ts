@@ -1,9 +1,11 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { streamText, convertToModelMessages, stepCountIs } from "ai";
-import { SYSTEM_PROMPT, buildGoalSystemPrompt, buildMemoryContext, buildToolInstructions } from "@/lib/system-prompt";
+import { buildSpecialistSystemPrompt, buildMemoryContext, buildToolInstructions } from "@/lib/system-prompt";
 import { prepareMessagesForAPI } from "@/lib/message-windowing";
-import { allTools } from "@/lib/tool-schemas";
+import { allTools, getToolSubset } from "@/lib/tool-schemas";
 import { getThinkingConfig } from "@/lib/thinking-budget";
+import { classifyQuery } from "@/lib/agent-router";
+import { getAgentProfile } from "@/lib/agent-profiles";
 
 export const maxDuration = 60;
 
@@ -30,19 +32,19 @@ export async function POST(req: Request) {
       console.log("[chat] Message windowing applied — older document content stripped");
     }
 
-    let systemPrompt = goalContext
-      ? buildGoalSystemPrompt(
-          goalContext.title,
-          goalContext.goal,
-          goalContext.signals,
-        )
-      : SYSTEM_PROMPT;
+    // Extract latest user message for classification and memory matching
+    const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === "user");
+    const userText = lastUserMsg?.content || lastUserMsg?.parts?.filter((p: { type: string }) => p.type === "text").map((p: { text: string }) => p.text).join("") || "";
+
+    // Classify query → select specialist agent
+    const agentId = await classifyQuery(userText, goalContext?.goal?.category);
+    const agentProfile = getAgentProfile(agentId);
+
+    // Build system prompt: base (or goal) + specialist extension
+    let systemPrompt = buildSpecialistSystemPrompt(agentProfile, goalContext);
 
     // Inject long-term memory context
     if (memories && memories.length > 0) {
-      // Extract latest user message for keyword-matched decision injection
-      const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === "user");
-      const userText = lastUserMsg?.content || lastUserMsg?.parts?.filter((p: { type: string }) => p.type === "text").map((p: { text: string }) => p.text).join("") || "";
       systemPrompt += buildMemoryContext(memories, userText);
     }
 
@@ -57,6 +59,11 @@ export async function POST(req: Request) {
     const selectedModel = model || "claude-sonnet-4-6";
     const thinkingConfig = getThinkingConfig(selectedModel, windowedMessages, researchMode);
 
+    // Select tools: specialists get filtered subset, generalist gets all
+    const agentTools = agentId === "generalist"
+      ? allTools
+      : getToolSubset(agentProfile.toolNames);
+
     const result = streamText({
       model: anthropic(selectedModel),
       system: systemPrompt,
@@ -70,7 +77,7 @@ export async function POST(req: Request) {
         },
       }),
       tools: {
-        ...allTools,
+        ...agentTools,
         ...(webSearch && { webSearch: anthropic.tools.webSearch_20250305() }),
       },
     });

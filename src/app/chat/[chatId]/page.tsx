@@ -28,6 +28,8 @@ import { extractDocumentMetadata } from "@/lib/file-utils";
 import { listAllMemories } from "@/hooks/useMemoryStore";
 import { executeToolCall } from "@/lib/tool-executor";
 import { WRITE_TOOLS, MEMORY_TOOLS, GOAL_TOOLS, type ToolName } from "@/lib/tool-schemas";
+import { getAgentByGoalCategory, type AgentId } from "@/lib/agent-profiles";
+import { classifyByKeywords } from "@/lib/agent-router";
 import type { DashboardSchema, GoalMeta, GoalStatus, MemoryRecord, SignalRecord } from "@/types";
 
 const mobileQuery = "(max-width: 767px)";
@@ -69,6 +71,7 @@ export default function ChatPage({
   const [chatError, setChatError] = useState<{ message: string; code?: string } | null>(null);
   const [memories, setMemories] = useState<MemoryRecord[]>([]);
   const [recentlyCompleted, setRecentlyCompleted] = useState<Set<string>>(new Set());
+  const [agentId, setAgentId] = useState<AgentId>("generalist");
 
   // Build transport body — include goalContext when this is a goal thread
   const baseBody = { model: selectedModel, researchMode, webSearch, memories };
@@ -167,6 +170,23 @@ export default function ChatPage({
   });
 
   const isLoading = status === "submitted" || status === "streaming";
+
+  // Client-side agent classification for AgentChip display
+  useEffect(() => {
+    if (goalMeta?.category) {
+      setAgentId(getAgentByGoalCategory(goalMeta.category));
+      return;
+    }
+    // For non-goal chats, classify from latest user message
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    if (lastUser) {
+      const text = lastUser.parts
+        ?.filter((p) => p.type === "text")
+        .map((p) => (p as { text: string }).text)
+        .join("") || "";
+      if (text) setAgentId(classifyByKeywords(text));
+    }
+  }, [messages, goalMeta?.category]);
 
   // Set active chat
   useEffect(() => {
@@ -345,7 +365,7 @@ export default function ChatPage({
       <div className="flex flex-1 min-h-0">
         {/* Chat area */}
         <div className="flex flex-1 min-w-0 flex-col">
-          <ChatMessages messages={messages} isLoading={isLoading} />
+          <ChatMessages messages={messages} isLoading={isLoading} agentId={agentId} />
 
           {chatError && (
             <div className="shrink-0 px-4">
