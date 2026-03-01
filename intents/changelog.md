@@ -22,6 +22,8 @@ Fixed two bugs preventing dashboard values from persisting in goal threads:
 1. **Race condition**: Messages persistence `useEffect` clobbered tool executor writes via concurrent read-modify-write on the same IndexedDB record. Fixed with a per-chat write serializer (`withChatLock`).
 2. **Model guidance**: Model only populated 1 of 10 dashboard fields. Improved `update_dashboard` tool description and goal thread system prompt to instruct bulk-population of all determinable metrics.
 
+**Commits:** `16459ee` Fix dashboard values clobbered by message persistence race condition
+
 ### Specialized Financial Agents — [`intents/agent-sdk.md`](intents/agent-sdk.md)
 
 Prompt-routing architecture with 4 specialized financial agents (Tax Advisor, Portfolio Analyzer, Budget Planner, Estate Planner) that receive focused system prompts and filtered tool subsets based on query classification.
@@ -34,6 +36,8 @@ Prompt-routing architecture with 4 specialized financial agents (Tax Advisor, Po
 - **`buildSpecialistSystemPrompt()`**: composes base/goal prompt + specialist extension in a single function
 - 82 new unit tests (agent-profiles: 58, agent-router: 24) — 249 total passing
 
+**Commits:** `f9d5efd` Add specialized financial agents with prompt routing
+
 ---
 
 ### Flatten Dashboard Schema & Fix Specialist Tool Subsets
@@ -43,6 +47,8 @@ Two tool-use fixes discovered during live testing of the specialized agents feat
 - **Schema flattened**: `update_dashboard` required `{value: x}` wrapper objects but the model sent bare values — simplified schema to `z.record(z.string(), z.union([z.string(), z.number(), z.boolean()]))` and updated executor to read bare values directly
 - **Goal thread tools added to all specialists**: Tax Advisor, Budget Planner, and Estate Planner were missing `update_dashboard`, `complete_action_item`, and `get_goal` — goal thread infrastructure tools needed by any specialist operating in a goal thread. All specialists now have 10+ tools (up from 7)
 - Flatter schemas and complete tool subsets reduce LLM tool-use errors in production
+
+**Commits:** `b0514d1` Flatten update_dashboard schema to prevent model validation errors · `08c149c` Add goal thread tools to all specialist agents
 
 ---
 
@@ -400,6 +406,16 @@ Transform suggested prompts into a goals-first experience with comprehensive wea
 
 | SHA | Message |
 |-----|---------|
+| `16459ee` | Fix dashboard values clobbered by message persistence race condition |
+| `129ac06` | Update changelog with dashboard schema and tool subset fixes |
+| `08c149c` | Add goal thread tools to all specialist agents |
+| `d14dea5` | Update changelog with flatten dashboard schema fix |
+| `b0514d1` | Flatten update_dashboard schema to prevent model validation errors |
+| `f9d5efd` | Add specialized financial agents with prompt routing |
+| `9c0ddb0` | Update changelog with eliminate fire-and-forget |
+| `fa4e281` | Update changelog with markdown table fix |
+| `133887a` | Merge text parts across source-url boundaries for markdown tables |
+| `c1da2eb` | Update changelog with thinking UI and stale tool chip fix |
 | `088bec3` | Convert fire-and-forget AI processes to visible tool chips |
 | `c2fb1a6` | Fix error state for tool chips when stream fails mid-flight |
 | `5c63852` | Add thinking UI with adaptive budget for research mode |
